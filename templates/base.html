@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html class="scroll-smooth" lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>{% block title %}SevaSetu | Connecting Helping Hands to Hopeful Hearts{% endblock %}</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+
+  <!-- Tailwind Config -->
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "on-tertiary-fixed": "#410006",
+            "surface-container-low": "#eff4ff",
+            "outline": "#6e7a71",
+            "on-background": "#121c2a",
+            "on-tertiary-container": "#6d0714",
+            "secondary-container": "#fea619",
+            "on-error": "#ffffff",
+            "secondary-fixed": "#ffddb8",
+            "primary": "#006c44",
+            "error-container": "#ffdad6",
+            "on-tertiary-fixed-variant": "#881d24",
+            "surface-container": "#e6eeff",
+            "surface-container-high": "#dee9fc",
+            "primary-container": "#4caf7d",
+            "secondary-fixed-dim": "#ffb95f",
+            "tertiary-container": "#fa7272",
+            "on-secondary": "#ffffff",
+            "on-surface-variant": "#3e4942",
+            "primary-fixed-dim": "#77daa4",
+            "surface-dim": "#d0dbed",
+            "outline-variant": "#bdcabf",
+            "surface": "#f8f9ff",
+            "on-primary": "#ffffff",
+            "on-primary-fixed": "#002112",
+            "surface-tint": "#006c44",
+            "surface-container-highest": "#d9e3f6",
+            "on-primary-fixed-variant": "#005232",
+            "on-secondary-container": "#684000",
+            "inverse-on-surface": "#eaf1ff",
+            "on-tertiary": "#ffffff",
+            "on-error-container": "#93000a",
+            "surface-variant": "#d9e3f6",
+            "surface-bright": "#f8f9ff",
+            "on-secondary-fixed-variant": "#653e00",
+            "on-surface": "#121c2a",
+            "inverse-surface": "#27313f",
+            "tertiary-fixed": "#ffdad8",
+            "inverse-primary": "#77daa4",
+            "surface-container-lowest": "#ffffff",
+            "tertiary-fixed-dim": "#ffb3b0",
+            "background": "#f8f9ff",
+            "on-secondary-fixed": "#2a1700",
+            "tertiary": "#a83639",
+            "on-primary-container": "#003d25",
+            "error": "#ba1a1a",
+            "primary-fixed": "#93f7bf",
+            "secondary": "#855300"
+          },
+          fontFamily: {
+            "headline": ["Plus Jakarta Sans"],
+            "body": ["Plus Jakarta Sans"],
+            "label": ["Plus Jakarta Sans"]
+          },
+          borderRadius: {
+            "DEFAULT": "1rem",
+            "lg": "2rem",
+            "xl": "3rem",
+            "full": "9999px"
+          },
+        },
+      },
+    }
+  </script>
+
+  <!-- Global Styles -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"/>
+
+  {% block head %}{% endblock %}
+</head>
+
+<body class="bg-surface font-body text-on-surface selection:bg-primary-container selection:text-on-primary-container">
+
+  <!-- Navbar -->
+  <header class="fixed top-0 z-50 w-full bg-surface-container-low/80 backdrop-blur-md shadow-[0_20px_40px_rgba(0,108,68,0.06)]">
+    <nav class="flex justify-between items-center w-full px-6 py-4 max-w-7xl mx-auto">
+
+      <!-- Logo -->
+      <a href="/" class="text-2xl font-bold text-emerald-900 tracking-tighter flex items-center gap-2">
+        <span class="material-symbols-outlined text-primary text-3xl" style="font-variation-settings: 'FILL' 1;">eco</span>
+        SevaSetu
+      </a>
+
+      <!-- Desktop Nav Links -->
+      <div class="hidden md:flex items-center space-x-8">
+        <a class="{% if request.path == '/' %}text-emerald-700 border-b-2 border-emerald-600 pb-1 font-bold{% else %}text-slate-500 hover:text-emerald-600 transition-colors{% endif %}" href="/">Home</a>
+        <a class="{% if request.path == '/discover' %}text-emerald-700 border-b-2 border-emerald-600 pb-1 font-bold{% else %}text-slate-500 hover:text-emerald-600 transition-colors{% endif %}" href="/discover">Discover</a>
+        {% if session.get('user') %}
+        <a class="{% if '/dashboard' in request.path %}text-emerald-700 border-b-2 border-emerald-600 pb-1 font-bold{% else %}text-slate-500 hover:text-emerald-600 transition-colors{% endif %}" href="/dashboard">Dashboard</a>
+        <a class="text-slate-500 hover:text-emerald-600 transition-colors" href="/inbox">Inbox</a>
+        {% endif %}
+      </div>
+
+      <!-- Right Side Icons -->
+      <div class="flex items-center gap-4">
+        {% if session.get('user') %}
+        <!-- Notification Bell -->
+        <button class="p-2 text-on-surface-variant hover:bg-emerald-50 rounded-full transition-all duration-200 active:scale-95">
+          <span class="material-symbols-outlined">notifications</span>
+        </button>
+        <!-- Avatar -->
+        <a href="/profile">
+          <div class="w-10 h-10 rounded-full overflow-hidden border-2 border-primary-container">
+            <img alt="User profile" src="{{ session['user'].get('photo_url', '') }}" class="w-full h-full object-cover"/>
+          </div>
+        </a>
+        <!-- Logout -->
+        <a href="/logout" class="text-sm text-slate-500 hover:text-red-500 transition-colors hidden md:block">Logout</a>
+        {% else %}
+        <a href="/getstarted" class="primary-gradient-btn text-white px-6 py-2.5 rounded-full font-bold text-sm shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all">
+          Get Started
+        </a>
+        {% endif %}
+
+        <!-- Mobile Hamburger -->
+        <button class="md:hidden p-2 text-on-surface-variant hover:bg-emerald-50 rounded-full" id="mobile-menu-btn">
+          <span class="material-symbols-outlined">menu</span>
+        </button>
+      </div>
+
+    </nav>
+
+    <!-- Mobile Menu -->
+    <div class="hidden md:hidden px-6 pb-4 space-y-2" id="mobile-menu">
+      <a class="block py-2 text-emerald-700 font-bold" href="/">Home</a>
+      <a class="block py-2 text-slate-500" href="/discover">Discover</a>
+      {% if session.get('user') %}
+      <a class="block py-2 text-slate-500" href="/dashboard">Dashboard</a>
+      <a class="block py-2 text-slate-500" href="/inbox">Inbox</a>
+      <a class="block py-2 text-red-400" href="/logout">Logout</a>
+      {% else %}
+      <a class="block py-2 text-primary font-bold" href="/getstarted">Get Started</a>
+      {% endif %}
+    </div>
+  </header>
+
+  <!-- Page Content -->
+  <main class="pt-24">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-slate-50 border-t border-slate-100">
+    <div class="flex flex-col md:flex-row justify-between items-center px-8 py-12 max-w-7xl mx-auto space-y-6 md:space-y-0">
+
+      <div class="flex flex-col space-y-2 text-center md:text-left">
+        <div class="text-lg font-bold text-emerald-900 tracking-tighter flex items-center gap-2 justify-center md:justify-start">
+          <span class="material-symbols-outlined text-primary text-2xl" style="font-variation-settings: 'FILL' 1;">eco</span>
+          SevaSetu
+        </div>
+        <p class="text-sm text-slate-500 max-w-xs">Elevated Neighborliness. Building bridges of empathy across the community.</p>
+      </div>
+
+      <div class="flex flex-wrap justify-center gap-8">
+        <a class="text-sm text-slate-400 hover:text-emerald-600 underline underline-offset-4 transition-all duration-300" href="#">Privacy Policy</a>
+        <a class="text-sm text-slate-400 hover:text-emerald-600 underline underline-offset-4 transition-all duration-300" href="#">Terms of Service</a>
+        <a class="text-sm text-slate-400 hover:text-emerald-600 underline underline-offset-4 transition-all duration-300" href="#">Contact Us</a>
+        <a class="text-sm text-slate-400 hover:text-emerald-600 underline underline-offset-4 transition-all duration-300" href="#">Community Guidelines</a>
+      </div>
+
+      <div class="text-sm text-slate-500">
+        © 2024 SevaSetu. Elevated Neighborliness.
+      </div>
+
+    </div>
+  </footer>
+
+  <!-- Global Scripts -->
+  <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+  {% block scripts %}{% endblock %}
+
+</body>
+</html>
