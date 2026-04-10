@@ -263,13 +263,13 @@
       <!-- Need Title -->
       <div class="form-field">
         <span class="form-label">Need Title</span>
-        <input type="text" class="form-input" placeholder="e.g. Emergency Water Supply for Zone 4" />
+        <input type="text" id="manualTitle" class="form-input" placeholder="e.g. Emergency Water Supply for Zone 4" />
       </div>
 
       <!-- Category -->
       <div class="form-field">
         <span class="form-label">Category</span>
-        <select class="form-select">
+        <select id="manualCategory" class="form-select">
           <option value="" disabled selected>Select a category</option>
           <option>Healthcare</option>
           <option>Education</option>
@@ -306,19 +306,19 @@
       <!-- Location -->
       <div class="form-field">
         <span class="form-label">Location / Area</span>
-        <input type="text" class="form-input" placeholder="e.g. Ward 7, Dharavi, Mumbai" />
+        <input type="text" id="manualLocation" class="form-input" placeholder="e.g. Ward 7, Dharavi, Mumbai" />
       </div>
 
       <!-- Description -->
       <div class="form-field">
         <span class="form-label">Description</span>
-        <textarea class="form-input" rows="3" placeholder="Describe the need in detail — who needs it, how many people, any deadlines..." style="resize:vertical;"></textarea>
+        <textarea id="manualDescription" class="form-input" rows="3" placeholder="Describe the need in detail — who needs it, how many people, any deadlines..." style="resize:vertical;"></textarea>
       </div>
 
       <!-- Estimated People -->
       <div class="form-field">
         <span class="form-label">Estimated People Affected</span>
-        <input type="number" class="form-input" placeholder="e.g. 120" min="1" />
+        <input type="number" id="manualAffected" class="form-input" placeholder="e.g. 120" min="1" />
       </div>
 
     </div>
@@ -326,7 +326,7 @@
     <!-- Actions -->
     <div class="flex gap-3 mt-8">
       <button onclick="closeManual()" class="flex-1 py-3 bg-surface-container-highest text-on-surface rounded-full font-bold text-sm hover:bg-surface-container-high transition-colors">Cancel</button>
-      <button onclick="handleManualSubmit()" class="flex-1 py-3 bg-gradient-to-r from-secondary to-secondary-container text-on-secondary rounded-full font-bold text-sm shadow-lg shadow-secondary/20 hover:scale-105 transition-transform">
+      <button onclick="handleManualSubmit()" id="manualSubmitBtn" class="flex-1 py-3 bg-gradient-to-r from-secondary to-secondary-container text-on-secondary rounded-full font-bold text-sm shadow-lg shadow-secondary/20 hover:scale-105 transition-transform">
         Submit Need
       </button>
     </div>
@@ -375,7 +375,7 @@
     <!-- Welcome -->
     <section class="fade-up fade-up-1">
       <p class="text-xs font-bold uppercase tracking-widest text-primary mb-1">Dashboard</p>
-      <h2 class="text-3xl md:text-4xl font-extrabold tracking-tight text-on-surface">Good morning, GreenRoots Foundation 👋</h2>
+      <h2 id="welcomeHeading" class="text-3xl md:text-4xl font-extrabold tracking-tight text-on-surface">Good morning, GreenRoots Foundation 👋</h2>
       <p class="text-on-surface-variant mt-2 text-lg">Here's what needs your attention today</p>
     </section>
 
@@ -386,36 +386,36 @@
           <div class="p-3 bg-primary/10 rounded-2xl text-primary"><span class="material-symbols-outlined text-3xl" style="font-variation-settings:'FILL' 1">pending_actions</span></div>
           <span class="text-xs font-bold tracking-widest text-primary uppercase bg-primary/8 px-2 py-1 rounded-full">Active</span>
         </div>
-        <div class="text-4xl font-extrabold text-on-surface mb-1">24</div>
+        <div class="text-4xl font-extrabold text-on-surface mb-1" id="statOpenNeeds">24</div>
         <div class="text-on-surface-variant text-sm font-medium">Open Needs</div>
-        <div class="mt-3 h-1 rounded-full bg-primary/10"><div class="h-1 rounded-full bg-primary w-3/5"></div></div>
+        <div class="mt-3 h-1 rounded-full bg-primary/10"><div id="progressOpen" class="h-1 rounded-full bg-primary w-3/5"></div></div>
       </div>
       <div class="stat-card bg-white p-6 rounded-xl border border-secondary/5">
         <div class="flex justify-between items-start mb-5">
           <div class="p-3 bg-secondary/10 rounded-2xl text-secondary"><span class="material-symbols-outlined text-3xl" style="font-variation-settings:'FILL' 1">assignment_ind</span></div>
           <span class="text-xs font-bold tracking-widest text-secondary uppercase bg-secondary/8 px-2 py-1 rounded-full">Processing</span>
         </div>
-        <div class="text-4xl font-extrabold text-on-surface mb-1">12</div>
+        <div class="text-4xl font-extrabold text-on-surface mb-1" id="statAssignedNeeds">12</div>
         <div class="text-on-surface-variant text-sm font-medium">Assigned Needs</div>
-        <div class="mt-3 h-1 rounded-full bg-secondary/10"><div class="h-1 rounded-full bg-secondary w-2/5"></div></div>
+        <div class="mt-3 h-1 rounded-full bg-secondary/10"><div id="progressAssigned" class="h-1 rounded-full bg-secondary w-2/5"></div></div>
       </div>
       <div class="stat-card bg-white p-6 rounded-xl border border-primary-container/10">
         <div class="flex justify-between items-start mb-5">
           <div class="p-3 bg-primary-container/15 rounded-2xl text-primary-container"><span class="material-symbols-outlined text-3xl" style="font-variation-settings:'FILL' 1">verified</span></div>
           <span class="text-xs font-bold tracking-widest text-primary-container uppercase bg-primary-container/10 px-2 py-1 rounded-full">Monthly</span>
         </div>
-        <div class="text-4xl font-extrabold text-on-surface mb-1">148</div>
+        <div class="text-4xl font-extrabold text-on-surface mb-1" id="statCompleted">148</div>
         <div class="text-on-surface-variant text-sm font-medium">Completed This Month</div>
-        <div class="mt-3 h-1 rounded-full bg-primary-container/15"><div class="h-1 rounded-full bg-primary-container w-4/5"></div></div>
+        <div class="mt-3 h-1 rounded-full bg-primary-container/15"><div id="progressDone" class="h-1 rounded-full bg-primary-container w-4/5"></div></div>
       </div>
       <div class="stat-card bg-white p-6 rounded-xl border border-tertiary/5">
         <div class="flex justify-between items-start mb-5">
           <div class="p-3 bg-tertiary/10 rounded-2xl text-tertiary"><span class="material-symbols-outlined text-3xl" style="font-variation-settings:'FILL' 1">groups</span></div>
           <span class="text-xs font-bold tracking-widest text-tertiary uppercase bg-tertiary/8 px-2 py-1 rounded-full">Community</span>
         </div>
-        <div class="text-4xl font-extrabold text-on-surface mb-1">86</div>
+        <div class="text-4xl font-extrabold text-on-surface mb-1" id="statVolunteers">86</div>
         <div class="text-on-surface-variant text-sm font-medium">Active Volunteers</div>
-        <div class="mt-3 h-1 rounded-full bg-tertiary/10"><div class="h-1 rounded-full bg-tertiary w-1/2"></div></div>
+        <div class="mt-3 h-1 rounded-full bg-tertiary/10"><div id="progressVols" class="h-1 rounded-full bg-tertiary w-1/2"></div></div>
       </div>
     </section>
 
@@ -429,9 +429,9 @@
         <div class="bg-surface-container-lowest rounded-lg overflow-hidden shadow-[0_20px_40px_rgba(0,108,68,0.04)]">
           <div class="p-8 pb-4 flex justify-between items-center">
             <h3 class="text-xl font-bold text-on-surface">Recent Needs</h3>
-            <button class="text-primary font-bold text-sm hover:underline">View All</button>
+            <a href="/ngo/needs" class="text-primary font-bold text-sm hover:underline">View All</a>
           </div>
-          <div class="divide-y divide-surface-container">
+          <div id="recentNeedsContainer" class="divide-y divide-surface-container">
             <div class="p-8 flex items-center justify-between group hover:bg-surface-container-low transition-colors">
               <div class="flex items-center gap-6">
                 <div class="w-2 h-12 bg-tertiary rounded-full"></div>
@@ -540,9 +540,9 @@
         <div class="bg-surface-container-lowest p-8 rounded-lg shadow-[0_20px_40px_rgba(0,108,68,0.04)]">
           <div class="flex justify-between items-center mb-8">
             <h3 class="text-xl font-bold text-on-surface">Suggested Matches</h3>
-            <span class="bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-bold">New: 4</span>
+            <span id="matchesBadge" class="bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-bold">New: 4</span>
           </div>
-          <div class="space-y-8">
+          <div id="matchesContainer" class="space-y-8">
             <div class="flex flex-col gap-4">
               <div class="flex items-center gap-4">
                 <div class="relative">
@@ -624,7 +624,7 @@
           <span class="material-symbols-outlined">filter_list</span>
         </button>
       </div>
-      <div class="space-y-8 relative before:absolute before:left-[13px] before:top-2 before:bottom-2 before:w-[2px] before:bg-gradient-to-b before:from-primary/30 before:via-secondary/20 before:to-tertiary/20">
+      <div id="activityContainer" class="space-y-8 relative before:absolute before:left-[13px] before:top-2 before:bottom-2 before:w-[2px] before:bg-gradient-to-b before:from-primary/30 before:via-secondary/20 before:to-tertiary/20">
         <div class="relative pl-10">
           <div class="absolute left-0 top-1 w-7 h-7 rounded-full bg-primary-container border-[3px] border-white shadow-md timeline-dot-first flex items-center justify-center">
             <span class="material-symbols-outlined text-white" style="font-size:13px;font-variation-settings:'FILL' 1">check</span>
@@ -714,7 +714,6 @@ function closeModalOutside(e) { if(e.target===document.getElementById('post-moda
 function openManual() { document.getElementById('manual-modal').classList.add('open'); document.body.style.overflow='hidden'; }
 function closeManual() { document.getElementById('manual-modal').classList.remove('open'); document.body.style.overflow=''; }
 function closeManualOutside(e) { if(e.target===document.getElementById('manual-modal')) closeManual(); }
-function handleManualSubmit() { alert('Need submitted manually! (Connect your backend API here)'); closeManual(); }
 
 /* File handling */
 function handleFileSelect(e) { const f=e.target.files[0]; if(f) showFile(f); }
@@ -733,6 +732,6 @@ function clearFile(e) {
   const p=document.getElementById('file-preview'); p.classList.add('hidden'); p.classList.remove('flex');
   document.getElementById('submit-btn').setAttribute('disabled','');
 }
-function handleSubmit() { alert('Field report submitted! (Connect your backend API here)'); closeModal(); }
 </script>
+<script src="{{ url_for('static', filename='js/ngo_dashboard.js') }}"></script>
 </body></html>
