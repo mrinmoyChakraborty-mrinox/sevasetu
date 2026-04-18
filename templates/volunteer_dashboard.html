@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Volunteer Dashboard | SevaSetu</title>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#006c44", "primary-container": "#4caf7d",
+            "secondary": "#855300", "tertiary": "#a83639",
+            "surface": "#f8f9ff", "on-surface": "#121c2a",
+            "on-surface-variant": "#3e4942", "outline": "#6e7a71",
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Our custom stylesheet -->
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+<div id="all-tasks-modal" class="modal-backdrop" onclick="closeOnBackdrop(event,'all-tasks-modal')">
+  <div class="modal-box">
+
+    <!-- Sticky header -->
+    <div class="modal-head">
+      <span class="modal-title">All Available Tasks</span>
+      <button class="modal-close-btn" id="close-tasks-modal" aria-label="Close">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <p style="font-size:.82rem;color:#6e7a71;margin-bottom:18px;">12 tasks available in your area today</p>
+
+      <!-- Task 1 — High Urgency -->
+      <div class="task-card">
+        <div class="task-top">
+          <span class="urgency-chip uc-high"><span class="uc-dot"></span>High Urgency</span>
+          <span class="task-dist"><span class="material-symbols-outlined">distance</span>0.8 km</span>
+        </div>
+        <div class="task-name">Deliver Groceries to Senior Center</div>
+        <div class="task-org">Helping Hands Foundation · Koramangala, Block 4</div>
+        <div class="task-tags">
+          <span class="task-tag">Logistics</span>
+          <span class="task-tag">Driving</span>
+        </div>
+        <div class="task-actions">
+          <button class="btn-accept">Accept Task</button>
+          <button class="btn-decline">Decline</button>
+        </div>
+      </div>
+
+      <!-- Task 2 — Medium Urgency -->
+      <div class="task-card">
+        <div class="task-top">
+          <span class="urgency-chip uc-mid"><span class="uc-dot"></span>Medium Urgency</span>
+          <span class="task-dist"><span class="material-symbols-outlined">distance</span>2.4 km</span>
+        </div>
+        <div class="task-name">Teach Basic Computer Literacy</div>
+        <div class="task-org">Vidya Outreach · Indiranagar</div>
+        <div class="task-tags">
+          <span class="task-tag">Education</span>
+          <span class="task-tag">Tech</span>
+        </div>
+        <div class="task-actions">
+          <button class="btn-accept">Accept Task</button>
+          <button class="btn-decline">Decline</button>
+        </div>
+      </div>
+
+      <!-- Task 3 — Low Urgency -->
+      <div class="task-card">
+        <div class="task-top">
+          <span class="urgency-chip uc-low"><span class="uc-dot"></span>Low Urgency</span>
+          <span class="task-dist"><span class="material-symbols-outlined">distance</span>3.1 km</span>
+        </div>
+        <div class="task-name">Weekend Tree Planting Drive</div>
+        <div class="task-org">GreenCity Foundation · Whitefield</div>
+        <div class="task-tags">
+          <span class="task-tag">Environment</span>
+          <span class="task-tag">Community</span>
+        </div>
+        <div class="task-actions">
+          <button class="btn-accept">Accept Task</button>
+          <button class="btn-decline">Decline</button>
+        </div>
+      </div>
+
+      <!-- Task 4 -->
+      <div class="task-card">
+        <div class="task-top">
+          <span class="urgency-chip uc-high"><span class="uc-dot"></span>High Urgency</span>
+          <span class="task-dist"><span class="material-symbols-outlined">distance</span>1.2 km</span>
+        </div>
+        <div class="task-name">Emergency Medical Supply Distribution</div>
+        <div class="task-org">HealthFirst NGO · JP Nagar</div>
+        <div class="task-tags">
+          <span class="task-tag">Healthcare</span>
+          <span class="task-tag">Logistics</span>
+        </div>
+        <div class="task-actions">
+          <button class="btn-accept">Accept Task</button>
+          <button class="btn-decline">Decline</button>
+        </div>
+      </div>
+
+      <!-- Task 5 -->
+      <div class="task-card">
+        <div class="task-top">
+          <span class="urgency-chip uc-mid"><span class="uc-dot"></span>Medium Urgency</span>
+          <span class="task-dist"><span class="material-symbols-outlined">distance</span>4.5 km</span>
+        </div>
+        <div class="task-name">After-School Tutoring for Kids</div>
+        <div class="task-org">Shiksha Seva · BTM Layout</div>
+        <div class="task-tags">
+          <span class="task-tag">Education</span>
+          <span class="task-tag">Youth</span>
+        </div>
+        <div class="task-actions">
+          <button class="btn-accept">Accept Task</button>
+          <button class="btn-decline">Decline</button>
+        </div>
+      </div>
+
+      <!-- Task 6 -->
+      <div class="task-card">
+        <div class="task-top">
+          <span class="urgency-chip uc-low"><span class="uc-dot"></span>Low Urgency</span>
+          <span class="task-dist"><span class="material-symbols-outlined">distance</span>5.8 km</span>
+        </div>
+        <div class="task-name">Collect Donated Clothes from Residents</div>
+        <div class="task-org">Clothes for All · Rajajinagar</div>
+        <div class="task-tags">
+          <span class="task-tag">Collection</span>
+          <span class="task-tag">Driving</span>
+        </div>
+        <div class="task-actions">
+          <button class="btn-accept">Accept Task</button>
+          <button class="btn-decline">Decline</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+<div id="map-modal" class="modal-backdrop" onclick="closeOnBackdrop(event,'map-modal')">
+  <div class="modal-box" style="max-width:700px;">
+
+    <div class="modal-head">
+      <span class="modal-title">Find Tasks Near You</span>
+      <button class="modal-close-btn" id="close-map-modal" aria-label="Close">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+
+    <div class="modal-body">
+
+      <!-- Location bar -->
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;background:#f0faf5;padding:10px 14px;border-radius:10px;border:1px solid rgba(0,108,68,.1);">
+        <span class="material-symbols-outlined" style="color:#006c44;font-size:18px;">my_location</span>
+        <span style="font-size:.83rem;font-weight:600;color:#3e4942;">Currently viewing <strong>HSR Layout Sector 2</strong></span>
+        <span style="margin-left:auto;font-size:.72rem;font-weight:700;color:#006c44;background:rgba(0,108,68,.08);padding:3px 10px;border-radius:99px;">12 tasks nearby</span>
+      </div>
+
+      <!-- Full map image with pins -->
+      <div class="map-modal-img-wrap">
+        <img
+          src="https://lh3.googleusercontent.com/aida-public/AB6AXuA7RoPwrhbC-5AgMT7mRtNONdflC5w1rweubmDxkCwsm-eqeut1IwnVUxSwg9HnzPtnddaLAoXfRBd90G7IbLBApTstad_m1dt-x_7al0tJmRkmKz5Ll2T84VgXh0wrb77qC9V_Z02-VZc6TW-dBIhIKh-mVdByE0WYU_R_VKmfqt3aKdb-3KNa7Ee3ub1EAda2XLzVFFGUkpjYRTmPAT_gB9n3D7E1wPirPR3OKW9q81Yz8Y-DXJI_qHf9NpIaE4oi_pqAAAASzp26"
+          alt="Task map of HSR Layout"
+          style="width:100%;height:100%;object-fit:cover;"/>
+
+        <!-- Task pins with tooltips via title attribute -->
+        <div class="map-modal-pin mp-red"   style="top:22%;left:28%;" title="Deliver Groceries · 0.8km">
+          <span class="material-symbols-outlined">volunteer_activism</span>
+        </div>
+        <div class="map-modal-pin mp-green" style="bottom:28%;right:22%;" title="Tree Planting · 3.1km">
+          <span class="material-symbols-outlined">volunteer_activism</span>
+        </div>
+        <div class="map-modal-pin mp-amber" style="top:48%;left:55%;" title="Computer Literacy · 2.4km">
+          <span class="material-symbols-outlined">volunteer_activism</span>
+        </div>
+        <div class="map-modal-pin mp-blue" style="top:35%;right:38%;" title="Medical Supply · 1.2km">
+          <span class="material-symbols-outlined">volunteer_activism</span>
+        </div>
+
+        <!-- Zoom controls -->
+        <div class="map-modal-controls">
+          <button class="map-zoom-btn">+</button>
+          <button class="map-zoom-btn">−</button>
+        </div>
+      </div>
+
+      <!-- Legend -->
+      <div class="map-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#a83639;"></div>High Urgency</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#855300;"></div>Medium Urgency</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#006c44;"></div>Low Urgency</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#0369a1;"></div>Healthcare</div>
+      </div>
+
+    </div>
+  </div>
+</div>
+<header class="site-header">
+  <div class="header-inner">
+
+    <!-- Logo -->
+    <a href="#" class="logo-wrap">
+      <div class="logo-icon">
+        <span class="material-symbols-outlined">volunteer_activism</span>
+      </div>
+      <span class="logo-text">SevaSetu</span>
+    </a>
+
+    <!-- Page title (desktop only) -->
+    <span style="font-size:1rem;font-weight:700;color:#064e35;display:none;" class="md-only-title">Volunteer Dashboard</span>
+
+    <!-- Right: notification + avatar + hamburger -->
+    <div class="header-right">
+      <button class="icon-btn" aria-label="Notifications">
+        <span class="material-symbols-outlined">notifications</span>
+      </button>
+      <div class="avatar-btn">
+        <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuDEP3W3O20ubzU7H6bAIWmEGUaVbqW64eRKe1LqttzyrFTMHnnbWW3xfmrm81TW3Wkg4Sh7GoWBHNLp4bSYDEFLONKYmO7zTm8l2rL4FfmYeWSOQjRTMie3417fcS5NNtlioh6vBGkLaLN_LdjwZuu5GTogPobYiU7HEW-Ycd32gu8TL-ZXGKipbhKzgCmjsXSp4CV2Z850nc7KQs67iarO8czKtm8G779DjJN5W9Oz7YkSo4xBN5zexc5yDWP7VZMVXtfdaY9dkdI4" alt="Profile"/>
+      </div>
+      <!-- Hamburger + dropdown -->
+      <div class="menu-wrap">
+        <button class="icon-btn menu-btn" aria-label="Menu">
+          <span class="material-symbols-outlined">menu</span>
+        </button>
+        <div id="nav-dd">
+          <a href="#"><span class="material-symbols-outlined">home</span>Home</a>
+          <a href="#"><span class="material-symbols-outlined">explore</span>Discover</a>
+          <a href="#" class="act"><span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1">dashboard</span>Dashboard</a>
+          <a href="#"><span class="material-symbols-outlined">volunteer_activism</span>Requests</a>
+          <hr/>
+          <a href="#"><span class="material-symbols-outlined">settings</span>Settings</a>
+          <a href="#"><span class="material-symbols-outlined">logout</span>Logout</a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</header>
+
+
+<!-- ══════════════════════════════════════════════════════════
+     MAIN PAGE CONTENT
+══════════════════════════════════════════════════════════ -->
+<main>
+  <div class="page-body">
+
+
+    <!-- ── WELCOME BAR ──────────────────────────────────── -->
+    <section class="welcome-bar fu fu-1">
+      <div>
+        <h2>Hello, Arjun! Ready to make a difference? 🌱</h2>
+        <p>There are 12 new requests in your neighbourhood today.</p>
+      </div>
+      <!-- Online / Offline toggle -->
+      <div class="status-toggle">
+        <span class="status-label">Online</span>
+        <div class="toggle-track" title="Toggle availability">
+          <div class="toggle-thumb"></div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ── STATS ROW ─────────────────────────────────────── -->
+    <section class="stats-grid fu fu-2">
+
+      <!-- Tasks Matched -->
+      <div class="stat-card">
+        <div class="stat-icon si-green">
+          <span class="material-symbols-outlined">task_alt</span>
+        </div>
+        <div>
+          <div class="stat-label">Tasks Matched</div>
+          <div class="stat-num">24</div>
+        </div>
+      </div>
+
+      <!-- Completed -->
+      <div class="stat-card">
+        <div class="stat-icon si-amber">
+          <span class="material-symbols-outlined">volunteer_activism</span>
+        </div>
+        <div>
+          <div class="stat-label">Completed</div>
+          <div class="stat-num">158</div>
+        </div>
+      </div>
+
+      <!-- Rating -->
+      <div class="stat-card">
+        <div class="stat-icon si-red">
+          <span class="material-symbols-outlined">star</span>
+        </div>
+        <div>
+          <div class="stat-label">Your Rating</div>
+          <div class="stat-num">4.9</div>
+        </div>
+      </div>
+
+    </section>
+
+
+    <!-- ── MAIN DASHBOARD GRID ─────────────────────────── -->
+    <div class="dash-grid fu fu-3">
+
+
+      <!-- ────── LEFT: TASKS FOR YOU ────── -->
+      <div class="left-col">
+
+        <div class="section-head">
+          <span class="section-title">Tasks For You</span>
+          <!-- "View All" opens the all-tasks modal -->
+          <button class="view-all-btn" id="view-all-btn">View All</button>
+        </div>
+
+        <div class="task-stack">
+
+          <!-- Task Card 1 — High Urgency -->
+          <div class="task-card">
+            <div class="task-top">
+              <span class="urgency-chip uc-high"><span class="uc-dot"></span>High Urgency</span>
+              <span class="task-dist"><span class="material-symbols-outlined">distance</span>0.8 km away</span>
+            </div>
+            <div class="task-name">Deliver Groceries to Senior Center</div>
+            <div class="task-org">Helping Hands Foundation · Koramangala, Block 4</div>
+            <div class="task-tags">
+              <span class="task-tag">Logistics</span>
+              <span class="task-tag">Driving</span>
+            </div>
+            <div class="task-actions">
+              <button class="btn-accept">Accept Task</button>
+              <button class="btn-decline">Decline</button>
+            </div>
+          </div>
+
+          <!-- Task Card 2 — Medium Urgency -->
+          <div class="task-card">
+            <div class="task-top">
+              <span class="urgency-chip uc-mid"><span class="uc-dot"></span>Medium Urgency</span>
+              <span class="task-dist"><span class="material-symbols-outlined">distance</span>2.4 km away</span>
+            </div>
+            <div class="task-name">Teach Basic Computer Literacy</div>
+            <div class="task-org">Vidya Outreach · Indiranagar</div>
+            <div class="task-tags">
+              <span class="task-tag">Education</span>
+              <span class="task-tag">Tech</span>
+            </div>
+            <div class="task-actions">
+              <button class="btn-accept">Accept Task</button>
+              <button class="btn-decline">Decline</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+
+      <!-- ────── RIGHT: MAP ────── -->
+      <div class="right-col">
+
+        <div class="section-head">
+          <span class="section-title">Needs Near You</span>
+        </div>
+
+        <div class="map-card">
+
+          <!-- Mini map image -->
+          <div class="map-img-wrap">
+            <img
+              src="https://lh3.googleusercontent.com/aida-public/AB6AXuA7RoPwrhbC-5AgMT7mRtNONdflC5w1rweubmDxkCwsm-eqeut1IwnVUxSwg9HnzPtnddaLAoXfRBd90G7IbLBApTstad_m1dt-x_7al0tJmRkmKz5Ll2T84VgXh0wrb77qC9V_Z02-VZc6TW-dBIhIKh-mVdByE0WYU_R_VKmfqt3aKdb-3KNa7Ee3ub1EAda2XLzVFFGUkpjYRTmPAT_gB9n3D7E1wPirPR3OKW9q81Yz8Y-DXJI_qHf9NpIaE4oi_pqAAAASzp26"
+              alt="Map of nearby tasks"/>
+            <!-- Pins -->
+            <div class="map-pin p-red"><span class="material-symbols-outlined">volunteer_activism</span></div>
+            <div class="map-pin p-green"><span class="material-symbols-outlined">volunteer_activism</span></div>
+            <div class="map-pin p-amber"><span class="material-symbols-outlined">volunteer_activism</span></div>
+            <!-- Zoom controls -->
+            <div class="map-controls">
+              <button class="map-zoom-btn">+</button>
+              <button class="map-zoom-btn">−</button>
+            </div>
+          </div>
+
+          <!-- Footer: location + Find Task button -->
+          <div class="map-foot">
+            <div class="map-location">
+              <span class="material-symbols-outlined">my_location</span>
+              <span>HSR Layout <strong>Sector 2</strong></span>
+            </div>
+            <!-- "Find Task" opens the full map modal -->
+            <button class="find-task-btn" id="find-task-btn">
+              <span class="material-symbols-outlined">map</span>
+              Find Task
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+
+    </div>
+    <!-- END DASHBOARD GRID -->
+
+
+    <!-- ── MY ACCEPTED TASKS ─────────────────────────────── -->
+    <section class="fu fu-4">
+      <div class="section-head" style="margin-bottom:16px;">
+        <span class="section-title">My Accepted Tasks</span>
+      </div>
+
+      <div class="accepted-grid">
+
+        <!-- Ongoing Task 1 -->
+        <div class="accepted-card">
+          <div class="accepted-top">
+            <div>
+              <div class="accepted-name">Community Tree Planting</div>
+              <div class="accepted-due">Due in 2 days</div>
+            </div>
+            <span class="status-chip sc-green">In Progress</span>
+          </div>
+          <div>
+            <div class="progress-label">
+              <span>Setup Phase</span>
+              <span>65%</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill" style="width:65%;"></div>
+            </div>
+          </div>
+          <button class="view-details-btn">
+            View Details <span class="material-symbols-outlined">arrow_forward</span>
+          </button>
+        </div>
+
+        <!-- Ongoing Task 2 -->
+        <div class="accepted-card">
+          <div class="accepted-top">
+            <div>
+              <div class="accepted-name">Digital Workshop for Youth</div>
+              <div class="accepted-due">Starts Tomorrow</div>
+            </div>
+            <span class="status-chip sc-amber">Confirmed</span>
+          </div>
+          <div>
+            <div class="progress-label">
+              <span>Preparation</span>
+              <span>20%</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill" style="width:20%;"></div>
+            </div>
+          </div>
+          <button class="view-details-btn">
+            View Details <span class="material-symbols-outlined">arrow_forward</span>
+          </button>
+        </div>
+
+      </div>
+    </section>
+
+
+  </div>
+</main>
+
+
+<!-- ══════════════════════════════════════════════════════════
+     FOOTER
+══════════════════════════════════════════════════════════ -->
+<footer class="site-footer fu fu-5">
+  <div class="footer-inner">
+    <div>
+      <div class="footer-logo">SevaSetu</div>
+      <div class="footer-copy">© 2024 SevaSetu · Elevated Neighborliness.</div>
+    </div>
+    <div class="footer-links">
+      <a href="#">Privacy Policy</a>
+      <a href="#">Terms of Service</a>
+      <a href="#">Contact Us</a>
+    </div>
+  </div>
+</footer>
+
+
+<!-- ══════════════════════════════════════════════════════════
+     MOBILE BOTTOM NAVIGATION
+══════════════════════════════════════════════════════════ -->
+<nav class="mob-nav">
+  <a href="#" class="mob-nav-item">
+    <span class="material-symbols-outlined">home</span>Home
+  </a>
+  <a href="#" class="mob-nav-item">
+    <span class="material-symbols-outlined">explore</span>Discover
+  </a>
+  <a href="#" class="mob-nav-item active">
+    <span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1">dashboard</span>Dashboard
+  </a>
+  <a href="#" class="mob-nav-item">
+    <span class="material-symbols-outlined">volunteer_activism</span>Requests
+  </a>
+</nav>
+
+
+<!-- JavaScript — loaded last so all DOM elements exist -->
+<script src="app.js"></script>
+
+</body>
+</html>
