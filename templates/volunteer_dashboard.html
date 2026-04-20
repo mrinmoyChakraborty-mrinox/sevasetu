@@ -26,8 +26,8 @@
     }
   </script>
 
-  <!-- Our custom stylesheet -->
-  <link rel="stylesheet" href="style.css"/>
+  <!-- Our custom stylesheet-->
+  <link rel="stylesheet" href="/static/css/volunteer_dashboard.css"/> 
 </head>
 <body>
 <div id="all-tasks-modal" class="modal-backdrop" onclick="closeOnBackdrop(event,'all-tasks-modal')">
@@ -42,119 +42,120 @@
     </div>
 
     <div class="modal-body">
-      <p style="font-size:.82rem;color:#6e7a71;margin-bottom:18px;">12 tasks available in your area today</p>
-
-      <!-- Task 1 — High Urgency -->
-      <div class="task-card">
-        <div class="task-top">
-          <span class="urgency-chip uc-high"><span class="uc-dot"></span>High Urgency</span>
-          <span class="task-dist"><span class="material-symbols-outlined">distance</span>0.8 km</span>
+      <p id="allTasksCount" style="font-size:.82rem;color:#6e7a71;margin-bottom:18px;">12 tasks available in your area today</p>
+      <div id="allTasksBody">
+        <div class="task-card">
+            <div class="task-top">
+              <span class="urgency-chip uc-high"><span class="uc-dot"></span>High Urgency</span>
+              <span class="task-dist"><span class="material-symbols-outlined">distance</span>0.8 km</span>
+            </div>
+            <div class="task-name">Deliver Groceries to Senior Center</div>
+            <div class="task-org">Helping Hands Foundation · Koramangala, Block 4</div>
+            <div class="task-tags">
+              <span class="task-tag">Logistics</span>
+              <span class="task-tag">Driving</span>
+            </div>
+            <div class="task-actions">
+              <button class="btn-accept">Accept Task</button>
+              <button class="btn-decline">Decline</button>
+            </div>
         </div>
-        <div class="task-name">Deliver Groceries to Senior Center</div>
-        <div class="task-org">Helping Hands Foundation · Koramangala, Block 4</div>
-        <div class="task-tags">
-          <span class="task-tag">Logistics</span>
-          <span class="task-tag">Driving</span>
-        </div>
-        <div class="task-actions">
-          <button class="btn-accept">Accept Task</button>
-          <button class="btn-decline">Decline</button>
-        </div>
-      </div>
 
       <!-- Task 2 — Medium Urgency -->
-      <div class="task-card">
-        <div class="task-top">
-          <span class="urgency-chip uc-mid"><span class="uc-dot"></span>Medium Urgency</span>
-          <span class="task-dist"><span class="material-symbols-outlined">distance</span>2.4 km</span>
+        <div class="task-card">
+          <div class="task-top">
+            <span class="urgency-chip uc-mid"><span class="uc-dot"></span>Medium Urgency</span>
+            <span class="task-dist"><span class="material-symbols-outlined">distance</span>2.4 km</span>
+          </div>
+          <div class="task-name">Teach Basic Computer Literacy</div>
+          <div class="task-org">Vidya Outreach · Indiranagar</div>
+          <div class="task-tags">
+            <span class="task-tag">Education</span>
+            <span class="task-tag">Tech</span>
+          </div>
+          <div class="task-actions">
+            <button class="btn-accept">Accept Task</button>
+            <button class="btn-decline">Decline</button>
+          </div>
         </div>
-        <div class="task-name">Teach Basic Computer Literacy</div>
-        <div class="task-org">Vidya Outreach · Indiranagar</div>
-        <div class="task-tags">
-          <span class="task-tag">Education</span>
-          <span class="task-tag">Tech</span>
+
+        <!-- Task 3 — Low Urgency -->
+        <div class="task-card">
+          <div class="task-top">
+            <span class="urgency-chip uc-low"><span class="uc-dot"></span>Low Urgency</span>
+            <span class="task-dist"><span class="material-symbols-outlined">distance</span>3.1 km</span>
+          </div>
+          <div class="task-name">Weekend Tree Planting Drive</div>
+          <div class="task-org">GreenCity Foundation · Whitefield</div>
+          <div class="task-tags">
+            <span class="task-tag">Environment</span>
+            <span class="task-tag">Community</span>
+          </div>
+          <div class="task-actions">
+            <button class="btn-accept">Accept Task</button>
+            <button class="btn-decline">Decline</button>
+          </div>
         </div>
-        <div class="task-actions">
-          <button class="btn-accept">Accept Task</button>
-          <button class="btn-decline">Decline</button>
+
+        <!-- Task 4 -->
+        <div class="task-card">
+          <div class="task-top">
+            <span class="urgency-chip uc-high"><span class="uc-dot"></span>High Urgency</span>
+            <span class="task-dist"><span class="material-symbols-outlined">distance</span>1.2 km</span>
+          </div>
+          <div class="task-name">Emergency Medical Supply Distribution</div>
+          <div class="task-org">HealthFirst NGO · JP Nagar</div>
+          <div class="task-tags">
+            <span class="task-tag">Healthcare</span>
+            <span class="task-tag">Logistics</span>
+          </div>
+          <div class="task-actions">
+            <button class="btn-accept">Accept Task</button>
+            <button class="btn-decline">Decline</button>
+          </div>
         </div>
+
+        <!-- Task 5 -->
+        <div class="task-card">
+          <div class="task-top">
+            <span class="urgency-chip uc-mid"><span class="uc-dot"></span>Medium Urgency</span>
+            <span class="task-dist"><span class="material-symbols-outlined">distance</span>4.5 km</span>
+          </div>
+          <div class="task-name">After-School Tutoring for Kids</div>
+          <div class="task-org">Shiksha Seva · BTM Layout</div>
+          <div class="task-tags">
+            <span class="task-tag">Education</span>
+            <span class="task-tag">Youth</span>
+          </div>
+          <div class="task-actions">
+            <button class="btn-accept">Accept Task</button>
+            <button class="btn-decline">Decline</button>
+          </div>
+        </div>
+
+        <!-- Task 6 -->
+        <div class="task-card">
+          <div class="task-top">
+            <span class="urgency-chip uc-low"><span class="uc-dot"></span>Low Urgency</span>
+            <span class="task-dist"><span class="material-symbols-outlined">distance</span>5.8 km</span>
+          </div>
+          <div class="task-name">Collect Donated Clothes from Residents</div>
+          <div class="task-org">Clothes for All · Rajajinagar</div>
+          <div class="task-tags">
+            <span class="task-tag">Collection</span>
+            <span class="task-tag">Driving</span>
+          </div>
+          <div class="task-actions">
+            <button class="btn-accept">Accept Task</button>
+            <button class="btn-decline">Decline</button>
+          </div>
       </div>
 
-      <!-- Task 3 — Low Urgency -->
-      <div class="task-card">
-        <div class="task-top">
-          <span class="urgency-chip uc-low"><span class="uc-dot"></span>Low Urgency</span>
-          <span class="task-dist"><span class="material-symbols-outlined">distance</span>3.1 km</span>
-        </div>
-        <div class="task-name">Weekend Tree Planting Drive</div>
-        <div class="task-org">GreenCity Foundation · Whitefield</div>
-        <div class="task-tags">
-          <span class="task-tag">Environment</span>
-          <span class="task-tag">Community</span>
-        </div>
-        <div class="task-actions">
-          <button class="btn-accept">Accept Task</button>
-          <button class="btn-decline">Decline</button>
-        </div>
       </div>
-
-      <!-- Task 4 -->
-      <div class="task-card">
-        <div class="task-top">
-          <span class="urgency-chip uc-high"><span class="uc-dot"></span>High Urgency</span>
-          <span class="task-dist"><span class="material-symbols-outlined">distance</span>1.2 km</span>
-        </div>
-        <div class="task-name">Emergency Medical Supply Distribution</div>
-        <div class="task-org">HealthFirst NGO · JP Nagar</div>
-        <div class="task-tags">
-          <span class="task-tag">Healthcare</span>
-          <span class="task-tag">Logistics</span>
-        </div>
-        <div class="task-actions">
-          <button class="btn-accept">Accept Task</button>
-          <button class="btn-decline">Decline</button>
-        </div>
-      </div>
-
-      <!-- Task 5 -->
-      <div class="task-card">
-        <div class="task-top">
-          <span class="urgency-chip uc-mid"><span class="uc-dot"></span>Medium Urgency</span>
-          <span class="task-dist"><span class="material-symbols-outlined">distance</span>4.5 km</span>
-        </div>
-        <div class="task-name">After-School Tutoring for Kids</div>
-        <div class="task-org">Shiksha Seva · BTM Layout</div>
-        <div class="task-tags">
-          <span class="task-tag">Education</span>
-          <span class="task-tag">Youth</span>
-        </div>
-        <div class="task-actions">
-          <button class="btn-accept">Accept Task</button>
-          <button class="btn-decline">Decline</button>
-        </div>
-      </div>
-
-      <!-- Task 6 -->
-      <div class="task-card">
-        <div class="task-top">
-          <span class="urgency-chip uc-low"><span class="uc-dot"></span>Low Urgency</span>
-          <span class="task-dist"><span class="material-symbols-outlined">distance</span>5.8 km</span>
-        </div>
-        <div class="task-name">Collect Donated Clothes from Residents</div>
-        <div class="task-org">Clothes for All · Rajajinagar</div>
-        <div class="task-tags">
-          <span class="task-tag">Collection</span>
-          <span class="task-tag">Driving</span>
-        </div>
-        <div class="task-actions">
-          <button class="btn-accept">Accept Task</button>
-          <button class="btn-decline">Decline</button>
-        </div>
-      </div>
-
     </div>
   </div>
 </div>
+
 <div id="map-modal" class="modal-backdrop" onclick="closeOnBackdrop(event,'map-modal')">
   <div class="modal-box" style="max-width:700px;">
 
@@ -176,12 +177,9 @@
 
       <!-- Full map image with pins -->
       <div class="map-modal-img-wrap">
-        <img
-          src="https://lh3.googleusercontent.com/aida-public/AB6AXuA7RoPwrhbC-5AgMT7mRtNONdflC5w1rweubmDxkCwsm-eqeut1IwnVUxSwg9HnzPtnddaLAoXfRBd90G7IbLBApTstad_m1dt-x_7al0tJmRkmKz5Ll2T84VgXh0wrb77qC9V_Z02-VZc6TW-dBIhIKh-mVdByE0WYU_R_VKmfqt3aKdb-3KNa7Ee3ub1EAda2XLzVFFGUkpjYRTmPAT_gB9n3D7E1wPirPR3OKW9q81Yz8Y-DXJI_qHf9NpIaE4oi_pqAAAASzp26"
-          alt="Task map of HSR Layout"
-          style="width:100%;height:100%;object-fit:cover;"/>
+        <div id="fullMapContainer" style="width:100%;height:100%;border-radius:12px;"></div>
 
-        <!-- Task pins with tooltips via title attribute -->
+        <!-- Task pins with tooltips via title attribute 
         <div class="map-modal-pin mp-red"   style="top:22%;left:28%;" title="Deliver Groceries · 0.8km">
           <span class="material-symbols-outlined">volunteer_activism</span>
         </div>
@@ -193,7 +191,7 @@
         </div>
         <div class="map-modal-pin mp-blue" style="top:35%;right:38%;" title="Medical Supply · 1.2km">
           <span class="material-symbols-outlined">volunteer_activism</span>
-        </div>
+        </div>-->
 
         <!-- Zoom controls -->
         <div class="map-modal-controls">
@@ -266,7 +264,7 @@
     <!-- ── WELCOME BAR ──────────────────────────────────── -->
     <section class="welcome-bar fu fu-1">
       <div>
-        <h2>Hello, Arjun! Ready to make a difference? 🌱</h2>
+        <h2 id="welcomeHeading">Hello, Arjun! Ready to make a difference? 🌱</h2>
         <p>There are 12 new requests in your neighbourhood today.</p>
       </div>
       <!-- Online / Offline toggle -->
@@ -289,7 +287,7 @@
         </div>
         <div>
           <div class="stat-label">Tasks Matched</div>
-          <div class="stat-num">24</div>
+          <div class="stat-num" id="statMatched">24</div>
         </div>
       </div>
 
@@ -300,7 +298,7 @@
         </div>
         <div>
           <div class="stat-label">Completed</div>
-          <div class="stat-num">158</div>
+          <div class="stat-num" id="statCompleted">158</div>
         </div>
       </div>
 
@@ -311,7 +309,7 @@
         </div>
         <div>
           <div class="stat-label">Your Rating</div>
-          <div class="stat-num">4.9</div>
+          <div class="stat-num" id="statRating">4.9</div>
         </div>
       </div>
 
@@ -331,7 +329,7 @@
           <button class="view-all-btn" id="view-all-btn">View All</button>
         </div>
 
-        <div class="task-stack">
+        <div class="task-stack" id="tasksForYou">
 
           <!-- Task Card 1 — High Urgency -->
           <div class="task-card">
@@ -384,25 +382,14 @@
 
           <!-- Mini map image -->
           <div class="map-img-wrap">
-            <img
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuA7RoPwrhbC-5AgMT7mRtNONdflC5w1rweubmDxkCwsm-eqeut1IwnVUxSwg9HnzPtnddaLAoXfRBd90G7IbLBApTstad_m1dt-x_7al0tJmRkmKz5Ll2T84VgXh0wrb77qC9V_Z02-VZc6TW-dBIhIKh-mVdByE0WYU_R_VKmfqt3aKdb-3KNa7Ee3ub1EAda2XLzVFFGUkpjYRTmPAT_gB9n3D7E1wPirPR3OKW9q81Yz8Y-DXJI_qHf9NpIaE4oi_pqAAAASzp26"
-              alt="Map of nearby tasks"/>
-            <!-- Pins -->
-            <div class="map-pin p-red"><span class="material-symbols-outlined">volunteer_activism</span></div>
-            <div class="map-pin p-green"><span class="material-symbols-outlined">volunteer_activism</span></div>
-            <div class="map-pin p-amber"><span class="material-symbols-outlined">volunteer_activism</span></div>
-            <!-- Zoom controls -->
-            <div class="map-controls">
-              <button class="map-zoom-btn">+</button>
-              <button class="map-zoom-btn">−</button>
-            </div>
+            <div id="miniMap" style="width:100%;height:100%;border-radius:12px;"></div>
           </div>
 
           <!-- Footer: location + Find Task button -->
           <div class="map-foot">
             <div class="map-location">
               <span class="material-symbols-outlined">my_location</span>
-              <span>HSR Layout <strong>Sector 2</strong></span>
+              <span id="currentLocation">Detecting location...</span>
             </div>
             <!-- "Find Task" opens the full map modal -->
             <button class="find-task-btn" id="find-task-btn">
@@ -425,7 +412,7 @@
         <span class="section-title">My Accepted Tasks</span>
       </div>
 
-      <div class="accepted-grid">
+      <div class="accepted-grid" id="acceptedTasksGrid">
 
         <!-- Ongoing Task 1 -->
         <div class="accepted-card">
@@ -503,13 +490,13 @@
      MOBILE BOTTOM NAVIGATION
 ══════════════════════════════════════════════════════════ -->
 <nav class="mob-nav">
-  <a href="#" class="mob-nav-item">
+  <a href="/" class="mob-nav-item">
     <span class="material-symbols-outlined">home</span>Home
   </a>
   <a href="#" class="mob-nav-item">
     <span class="material-symbols-outlined">explore</span>Discover
   </a>
-  <a href="#" class="mob-nav-item active">
+  <a href="/volunteer/dashboard" class="mob-nav-item active">
     <span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1">dashboard</span>Dashboard
   </a>
   <a href="#" class="mob-nav-item">
@@ -519,7 +506,10 @@
 
 
 <!-- JavaScript — loaded last so all DOM elements exist -->
-<script src="app.js"></script>
+<!-- Ola Maps SDK -->
+<script src="https://www.unpkg.com/olamaps-web-sdk@latest/dist/olamaps-web-sdk.umd.js"> </script>
+<!-- Volunteer Dashboard JS -->
+<script src="{{ url_for('static', filename='js/volunteer_dashboard.js') }}"> </script>
 
 </body>
 </html>

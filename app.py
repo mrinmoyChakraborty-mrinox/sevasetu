@@ -211,16 +211,192 @@ def api_skip_match(match_id):
 
 
 
+# ══════════════════════════════════════════════
+
+@app.route("/volunteer/onboarding", methods=["GET", "POST"])
+def volunteer_onboarding():
+    if not session.get("user"):
+        return redirect("/getstarted")
+
+    # ── GET → show form ──
+    if request.method == "GET":
+        return render_template("volunteer_onboarding.html", user=session["user"])
+
+    # ── POST → save data ──
+    uid = session["user"]["uid"]
+
+    name         = request.form.get("name",         "").strip()
+    phone        = request.form.get("phone",        "").strip()
+    about        = request.form.get("about",        "").strip()
+    availability = request.form.get("availability", "Anytime").strip()
+    radius       = request.form.get("radius",       "10")
+    latitude     = request.form.get("latitude",     "0")
+    longitude    = request.form.get("longitude",    "0")
+
+    # Skills come as JSON string: '["First Aid","Teaching"]'
+    import json as _json
+    try:
+        skills = _json.loads(request.form.get("skills", "[]"))
+    except Exception:
+        skills = []
+
+    # Server-side validation
+    if not name:
+        return jsonify({"error": "Name is required."}), 400
+    if not skills:
+        return jsonify({"error": "Please select at least one skill."}), 400
+
+    # Handle profile photo upload
+    photo_url = session["user"].get("photo_url", "")
+    photo = request.files.get("photo")
+    if photo and photo.filename:
+        result = imagekit_services.upload_volunteer_avatar(uid, photo)
+        if result:
+            photo_url = result.get("url", photo_url)
+
+    # Build volunteer profile data
+    volunteer_data = {
+        "name":         name,
+        "phone":        phone,
+        "about":        about,
+        "skills":       skills,
+        "availability": availability,
+        "radius":       int(radius),
+        "location": {
+            "lat": float(latitude),
+            "lng": float(longitude),
+        },
+        "photo_url":    photo_url,
+        "online":       True,
+    }
+
+    # Save to Firestore
+    firebase_services.create_volunteer_profile(uid, volunteer_data)
+
+    # Update session
+    session["user"]["name"]      = name
+    session["user"]["photo_url"] = photo_url
+    session["user"]["onboarded"] = True
+    session.modified = True
+
+    return jsonify({"redirect": "/volunteer/dashboard"})
 
 
+# ══════════════════════════════════════════════
+# VOLUNTEER DASHBOARD — PAGE
+# ══════════════════════════════════════════════
+
+@app.route("/volunteer/dashboard")
+def volunteer_dashboard():
+    if not session.get("user"):
+        return redirect("/getstarted")
+    if session["user"].get("role") != "volunteer":
+        return redirect("/select-role")
+    return render_template("volunteer_dashboard.html", user=session["user"])
 
 
+# ══════════════════════════════════════════════
+# VOLUNTEER DASHBOARD — API DATA
+# ══════════════════════════════════════════════
+
+@app.route("/api/volunteer/dashboard")
+def api_volunteer_dashboard():
+    if not session.get("user"):
+        return jsonify({"error": "Unauthorized"}), 401
+
+    uid = session["user"]["uid"]
+
+    # Get volunteer profile
+    vol = firebase_services.get_volunteer_profile(uid)
+
+    # Stats
+    all_matches = firebase_services.get_matches_for_volunteer(uid)
+
+    matched_tasks  = [m for m in all_matches if m.get("status") == "suggested"]
+    accepted_tasks = [m for m in all_matches
+                      if m.get("status") in ("accepted", "in_progress")]
+    completed      = [m for m in all_matches if m.get("status") == "completed"]
+
+    stats = {
+        "tasks_matched":   len(matched_tasks) + len(accepted_tasks),
+        "tasks_completed": len(completed),
+        "rating":          vol.get("rating", 0) if vol else 0
+    }
+
+    # Enrich matched tasks with need details
+    enriched_matched  = firebase_services.enrich_tasks_with_needs(
+        matched_tasks, uid
+    )
+    enriched_accepted = firebase_services.enrich_tasks_with_needs(
+        accepted_tasks, uid
+    )
+
+    return jsonify({
+        "volunteer_name": vol.get("name", session["user"].get("name", "Volunteer"))
+                          if vol else session["user"].get("name", "Volunteer"),
+        "stats":          stats,
+        "matched_tasks":  enriched_matched,
+        "accepted_tasks": enriched_accepted,
+    })
 
 
+# ══════════════════════════════════════════════
+# TASK ACTIONS
+# ══════════════════════════════════════════════
+
+@app.route("/api/volunteer/task/<task_id>/accept", methods=["POST"])
+def api_volunteer_accept_task(task_id):
+    if not session.get("user"):
+        return jsonify({"error": "Unauthorized"}), 401
+
+    uid = session["user"]["uid"]
+    firebase_services.volunteer_respond_to_match(task_id, uid, "accepted")
+    return jsonify({"success": True})
 
 
+@app.route("/api/volunteer/task/<task_id>/decline", methods=["POST"])
+def api_volunteer_decline_task(task_id):
+    if not session.get("user"):
+        return jsonify({"error": "Unauthorized"}), 401
+
+    uid = session["user"]["uid"]
+    firebase_services.volunteer_respond_to_match(task_id, uid, "declined")
+    return jsonify({"success": True})
 
 
+@app.route("/api/volunteer/task/<task_id>/complete", methods=["POST"])
+def api_volunteer_complete_task(task_id):
+    if not session.get("user"):
+        return jsonify({"error": "Unauthorized"}), 401
+
+    uid  = session["user"]["uid"]
+    data = request.json or {}
+
+    # Handle proof photo upload if provided
+    proof_url = None
+    proof = request.files.get("proof")
+    if proof and proof.filename:
+        result = imagekit_services.upload_task_proof(uid, task_id, proof)
+        if result:
+            proof_url = result.get("url")
+
+    firebase_services.volunteer_complete_task(task_id, uid, proof_url)
+    return jsonify({"success": True})
+
+
+# ══════════════════════════════════════════════
+# VOLUNTEER ONLINE STATUS
+# ══════════════════════════════════════════════
+
+@app.route("/api/volunteer/status", methods=["POST"])
+def api_volunteer_status():
+    if not session.get("user"):
+        return jsonify({"error": "Unauthorized"}), 401
+
+    uid    = session["user"]["uid"]
+    online = request.json.get("online", True)
+    firebase_services.update_volunteer_online(uid, online)
+    return jsonify({"success": True})
 
 
 
@@ -363,12 +539,6 @@ def select_role():
 # ======================
 # Onboarding Pages
 # ======================
-# ─────────────────────────────────────────────
-# ADD THESE ROUTES TO YOUR app.py
-# ─────────────────────────────────────────────
-
-# You need these imports at the top of app.py:
-#   (when ready)
 
 @app.route("/ngo/onboarding", methods=["GET", "POST"])
 def ngo_onboarding():
@@ -434,24 +604,8 @@ def ngo_onboarding():
 
     return jsonify({"redirect": "/ngo/dashboard"})
 
-@app.route("/volunteer/onboarding")
-def volunteer_onboarding():
-    if not session.get("user"):
-        return redirect("/getstarted")
-    return render_template("volunteer_onboarding.html", user=session["user"])
 
 
-# ======================
-# Dashboards
-# ======================
-
-@app.route("/volunteer/dashboard")
-def volunteer_dashboard():
-    if not session.get("user"):
-        return redirect("/getstarted")
-    if session["user"].get("role") != "volunteer":
-        return redirect("/select-role")
-    return render_template("volunteer_dashboard.html", user=session["user"])
 
 
 # ======================

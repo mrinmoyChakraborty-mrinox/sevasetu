@@ -276,3 +276,238 @@ def save_extracted_needs_draft(ngo_id, report_id, needs):
             "created_at":       firestore.SERVER_TIMESTAMP
         })
     batch.commit()
+
+# ══════════════════════════════════════════════
+# VOLUNTEER PROFILE
+# ══════════════════════════════════════════════
+
+def get_volunteer_profile(uid):
+    doc = db.collection("volunteers").document(uid).get()
+    return doc.to_dict() if doc.exists else {}
+
+
+def update_volunteer_online(uid, online):
+    db.collection("volunteers").document(uid).update({
+        "online":     online,
+        "updated_at": firestore.SERVER_TIMESTAMP
+    })
+
+
+# ══════════════════════════════════════════════
+# MATCHES FOR VOLUNTEER
+# ══════════════════════════════════════════════
+
+def get_matches_for_volunteer(vol_id, limit=20):
+    """
+    Get all matches where this volunteer is the target.
+    Returns list of match dicts with id included.
+    """
+    docs = (
+        db.collection("matches")
+          .where("volunteer_id", "==", vol_id)
+          .order_by("created_at", direction=firestore.Query.DESCENDING)
+          .limit(limit)
+          .stream()
+    )
+    result = []
+    for doc in docs:
+        d = doc.to_dict()
+        d["id"] = doc.id
+        result.append(d)
+    return result
+
+
+def enrich_tasks_with_needs(matches, vol_uid):
+    """
+    Given a list of match dicts, fetch the corresponding
+    need document and merge fields useful for the dashboard.
+    Also computes distance from volunteer's location.
+    """
+    if not matches:
+        return []
+
+    # Get volunteer location once
+    vol_doc = db.collection("volunteers").document(vol_uid).get()
+    vol     = vol_doc.to_dict() if vol_doc.exists else {}
+    vol_loc = vol.get("location", {})
+    vol_lat = vol_loc.get("lat")
+    vol_lng = vol_loc.get("lng")
+
+    enriched = []
+    for match in matches:
+        need_id = match.get("need_id")
+        if not need_id:
+            continue
+
+        need_doc = db.collection("needs").document(need_id).get()
+        if not need_doc.exists:
+            continue
+
+        need = need_doc.to_dict()
+        need["id"] = need_doc.id
+
+        # Fetch NGO name
+        ngo_id  = need.get("ngo_id", "")
+        ngo_doc = db.collection("ngos").document(ngo_id).get()
+        ngo_name = ngo_doc.to_dict().get("org_name", "NGO") if ngo_doc.exists else "NGO"
+
+        # Distance
+        distance_km = None
+        need_loc = need.get("location", {})
+        if vol_lat and vol_lng and need_loc.get("lat") and need_loc.get("lng"):
+            distance_km = round(
+                haversine(vol_lat, vol_lng, need_loc["lat"], need_loc["lng"]),
+                1
+            )
+
+        # Deadline text
+        deadline = need.get("deadline")
+        deadline_text = ""
+        if deadline:
+            try:
+                from datetime import datetime, timezone
+                if hasattr(deadline, "timestamp"):
+                    dt = datetime.fromtimestamp(deadline.timestamp(), tz=timezone.utc)
+                else:
+                    dt = datetime.fromisoformat(str(deadline))
+                days_left = (dt - datetime.now(tz=timezone.utc)).days
+                deadline_text = (
+                    f"Due in {days_left} day{'s' if days_left != 1 else ''}"
+                    if days_left > 0
+                    else "Due today"
+                )
+            except Exception:
+                pass
+
+        # Progress based on status
+        status   = match.get("status", need.get("status", "open"))
+        progress = {"suggested": 10, "accepted": 30, "in_progress": 60,
+                    "completed": 100}.get(status, 10)
+
+        enriched.append({
+            "id":             match["id"],       # match doc id used for accept/decline
+            "need_id":        need_id,
+            "title":          need.get("title", ""),
+            "description":    need.get("description", ""),
+            "category":       need.get("category", ""),
+            "urgency_label":  need.get("urgency_label", "MEDIUM"),
+            "urgency_score":  need.get("urgency_score", 5),
+            "required_skills":need.get("required_skills", []),
+            "location":       need_loc.get("city") or need.get("location", ""),
+            "lat":            need_loc.get("lat"),
+            "lng":            need_loc.get("lng"),
+            "ngo_name":       ngo_name,
+            "distance_km":    distance_km,
+            "status":         status,
+            "deadline_text":  deadline_text,
+            "progress_pct":   progress,
+            "phase":          "Setup Phase" if progress < 50 else "In Progress",
+            "created_at":     need.get("created_at"),
+        })
+
+    return enriched
+
+
+# ══════════════════════════════════════════════
+# VOLUNTEER TASK ACTIONS
+# ══════════════════════════════════════════════
+
+def volunteer_respond_to_match(match_id, vol_id, response):
+    """
+    response: "accepted" | "declined"
+    """
+    db.collection("matches").document(match_id).update({
+        "status":       response,
+        "responded_at": firestore.SERVER_TIMESTAMP
+    })
+
+    if response == "accepted":
+        # Update the need status to "assigned"
+        match_doc = db.collection("matches").document(match_id).get()
+        if match_doc.exists:
+            match = match_doc.to_dict()
+            need_id = match.get("need_id")
+            ngo_id  = match.get("ngo_id")
+            if need_id:
+                db.collection("needs").document(need_id).update({
+                    "status":                 "assigned",
+                    "assigned_volunteer_id":  vol_id,
+                    "updated_at":             firestore.SERVER_TIMESTAMP
+                })
+            # Log activity for NGO
+            if ngo_id:
+                need_doc = db.collection("needs").document(need_id).get()
+                need_title = need_doc.to_dict().get("title", "a need") if need_doc.exists else "a need"
+                vol_doc    = db.collection("volunteers").document(vol_id).get()
+                vol_name   = vol_doc.to_dict().get("name", "A volunteer") if vol_doc.exists else "A volunteer"
+                log_activity(
+                    ngo_id,
+                    "matched",
+                    f"{vol_name} accepted task",
+                    f'For need: "{need_title}"'
+                )
+
+    elif response == "declined":
+        # Mark this specific match as declined
+        # The matching engine can suggest the next volunteer
+        pass
+
+
+def volunteer_complete_task(match_id, vol_id, proof_url=None):
+    """Mark a task as completed by the volunteer."""
+    update_data = {
+        "status":       "completed",
+        "completed_at": firestore.SERVER_TIMESTAMP
+    }
+    if proof_url:
+        update_data["proof_url"] = proof_url
+
+    db.collection("matches").document(match_id).update(update_data)
+
+    # Update the need status
+    match_doc = db.collection("matches").document(match_id).get()
+    if match_doc.exists:
+        match   = match_doc.to_dict()
+        need_id = match.get("need_id")
+        ngo_id  = match.get("ngo_id")
+
+        if need_id:
+            db.collection("needs").document(need_id).update({
+                "status":     "completed",
+                "updated_at": firestore.SERVER_TIMESTAMP
+            })
+
+        # Increment volunteer's task count
+        db.collection("volunteers").document(vol_id).update({
+            "totalTasks": firestore.Increment(1),
+            "updated_at": firestore.SERVER_TIMESTAMP
+        })
+
+        # Log activity for NGO
+        if ngo_id:
+            need_doc   = db.collection("needs").document(need_id).get()
+            need_title = need_doc.to_dict().get("title", "a need") if need_doc.exists else "a need"
+            vol_doc    = db.collection("volunteers").document(vol_id).get()
+            vol_name   = vol_doc.to_dict().get("name", "A volunteer") if vol_doc.exists else "A volunteer"
+            log_activity(
+                ngo_id,
+                "completed",
+                f'"{need_title}" completed',
+                f"Verified by {vol_name}"
+            )
+
+
+# ══════════════════════════════════════════════
+# HAVERSINE (already in file — add if missing)
+# ══════════════════════════════════════════════
+
+def haversine(lat1, lon1, lat2, lon2):
+    """Distance between two lat/lng points in km."""
+    R = 6371
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    a = (math.sin(dlat / 2) ** 2 +
+         math.cos(math.radians(lat1)) *
+         math.cos(math.radians(lat2)) *
+         math.sin(dlon / 2) ** 2)
+    return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))    
