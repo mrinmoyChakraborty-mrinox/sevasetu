@@ -81,7 +81,7 @@ def _base_url() -> str:
 # PUBLIC HELPERS — one function per job type
 # ═════════════════════════════════════════════════════════════════════════════
 
-def enqueue_report_processing(report_id: str, ngo_uid: str, image_url: str, file_name: str) -> bool:
+def enqueue_report_processing(report_id: str, ngo_uid: str, image_url: str, file_name: str, file_type: str) -> bool:
     """
     Tell QStash to call  POST /api/internal/process-report  in ~2 seconds.
     Returns True if the message was accepted, False on error.

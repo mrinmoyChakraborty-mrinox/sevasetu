@@ -146,12 +146,13 @@ def api_upload_report():
     # ── Step 3: Enqueue Gemini extraction via QStash ──────────────────────────
     # QStash will POST to /api/internal/process-report in ~2 seconds.
     # This call takes ~200ms — much faster than starting Gemini here.
-    from services import qstash_service
+    
     enqueued = qstash_service.enqueue_report_processing(
         report_id = report_id,
         ngo_uid   = uid,
         image_url = image_url,
         file_name = file.filename,
+        file_type = ext.lstrip(".").upper(),
     )
  
     if not enqueued:
@@ -887,6 +888,7 @@ def worker_process_report():
         "ngo_uid":    "uid_of_ngo",
         "image_url":  "https://ik.imagekit.io/...",
         "file_name":  "community_survey.pdf"
+        "file_type":  "PDF"
     }
     """
     # ── 1. Verify signature ───────────────────────────────────────────────────
