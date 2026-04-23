@@ -5,8 +5,21 @@
             form submit to Flask backend
    ===================================================== */
 
-const OLA_MAPS_API_KEY = "cRtJZjnZnTH4ugwi0vxlaaiW436RH5LRwMNS6F7h";
+let OLA_MAPS_API_KEY = null;
 
+async function loadOlaMapsKey() {
+  try {
+    const res = await fetch("/api/get_ola_maps_key");
+    if (!res.ok) throw new Error("Failed to fetch key");
+
+    const data = await res.json();
+    OLA_MAPS_API_KEY = data.OLA_MAPS_API_KEY;
+
+  } catch (err) {
+    console.error("Error loading Ola Maps key:", err);
+  }
+}
+await loadOlaMapsKey();
 // ─────────────────────────────────────────────
 // DOM REFERENCES
 // ─────────────────────────────────────────────

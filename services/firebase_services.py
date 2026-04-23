@@ -24,6 +24,9 @@ if not firebase_admin._apps:
 
 db = firestore.client()
 
+def get_db():
+    return db
+
 def get_user_by_uid(uid):
     doc = db.collection("users").document(uid).get()
     return doc.to_dict() if doc.exists else None
@@ -113,7 +116,9 @@ def create_need(need_data):
     ref = db.collection("needs").add(need_data)
     return ref[1].id
 
-
+def get_need_by_need_id(need_id):
+    need_doc = db.collection("needs").document(need_id).get()
+    return need_doc
 def get_need_by_id(need_id):
     doc = db.collection("needs").document(need_id).get()
     if not doc.exists:
@@ -134,42 +139,60 @@ def update_need_status(need_id, status):
 # MATCHES
 # ══════════════════════════════════════════════
 
+ 
 def get_suggested_matches_for_ngo(ngo_id, limit=5):
     """
-    Returns suggested matches that are pending approval
-    for any need belonging to this NGO.
+    Returns suggested matches for NGO dashboard.
+    Now includes AI reasoning fields from matching_service v2.
     """
+    from firebase_admin import firestore as _fs
+    db = _fs.client()
+ 
     docs = (
         db.collection("matches")
-          .where("ngo_id",  "==", ngo_id)
-          .where("status",  "==", "suggested")
-          .order_by("match_score", direction=firestore.Query.DESCENDING)
+          .where("ngo_id", "==", ngo_id)
+          .where("status", "==", "suggested")
+          .order_by("match_score", direction=_fs.Query.DESCENDING)
           .limit(limit)
           .stream()
     )
-
+ 
     matches = []
     for doc in docs:
-        d = doc.to_dict()
+        d           = doc.to_dict()
         d["match_id"] = doc.id
-
+ 
         # Fetch volunteer details
         vol_id  = d.get("volunteer_id")
         vol_doc = db.collection("volunteers").document(vol_id).get()
+ 
         if vol_doc.exists:
             vol = vol_doc.to_dict()
             d["volunteer_name"]  = vol.get("name", "Volunteer")
-            d["volunteer_photo"] = vol.get("avatar_url", "")
+            d["volunteer_photo"] = vol.get("photo_url") or vol.get("avatar_url", "")
             d["skills"]          = vol.get("skills", [])
-            d["distance"]        = f"{d.get('distance_km', '?')} km away"
+            d["distance"]        = (
+                f"{d.get('distance_km', '?')} km away"
+                if d.get("distance_km") is not None
+                else "Nearby"
+            )
+            d["volunteer_was_online"] = d.get("volunteer_was_online", True)
         else:
             d["volunteer_name"]  = "Volunteer"
             d["volunteer_photo"] = ""
             d["skills"]          = []
             d["distance"]        = "Nearby"
-
+ 
+        # ── NEW: AI reasoning fields ──────────────────────────────
+        # These were added by matching_service v2.
+        # Older match docs won't have them — default gracefully.
+        d.setdefault("match_confidence", "MEDIUM")
+        d.setdefault("match_reason",     "")
+        d.setdefault("match_strengths",  [])
+        d.setdefault("match_concerns",   [])
+ 
         matches.append(d)
-
+ 
     return matches
 
 
@@ -277,6 +300,60 @@ def save_extracted_needs_draft(ngo_id, report_id, needs):
         })
     batch.commit()
 
+def get_reports_by_uid(uid):
+    docs = (
+        db.collection("reports")
+          .where("ngo_id", "==", uid)
+          .order_by("uploaded_at", direction=firestore.Query.DESCENDING)
+          .limit(50)
+          .stream()
+    )
+    return docs
+def get_report_by_report_id(report_id):
+    doc = db.collection("reports").document(report_id).get()
+    return doc
+
+
+def get_draft_needs_for_report(report_id):
+    needs_docs = (
+        db.collection("needs")
+          .where("report_id", "==", report_id)
+          .where("status",    "==", "draft")
+          .stream()
+    )
+    return needs_docs
+def get_needs_for_report(report_id):
+    needs_docs = (
+        db.collection("needs")
+          .where("report_id", "==", report_id)
+          .stream()
+    )
+    return needs_docs
+
+
+def create_report_doc_ref(uid,data):
+    ref=db.collection("reports").add({
+        "ngo_id":      uid,
+        "image_url":   data["image_url"],
+        "thumb_url":   data["thumb_url"],
+        "file_id":     data["file_id"],
+        "file_name":   data["file_name"],
+        "file_size":   data["file_size"],
+        "file_type":   data["file_type"],
+        "processed":   False,
+        "status":      "processing",
+        "needs_count": 0,
+        "uploaded_at": firestore.SERVER_TIMESTAMP,
+    })
+    return ref
+
+def update_report_status(report_id,update):
+    db.collection("reports").document(report_id).update(update)
+
+
+def update_need(need_id,update):
+    
+    db.collection("needs").document(need_id).update(update)  
 # ══════════════════════════════════════════════
 # VOLUNTEER PROFILE
 # ══════════════════════════════════════════════
@@ -291,6 +368,33 @@ def update_volunteer_online(uid, online):
         "online":     online,
         "updated_at": firestore.SERVER_TIMESTAMP
     })
+
+    # NEW — when a volunteer comes online, notify them of queued matches
+    if online:
+        _notify_queued_matches(db, uid)
+
+
+# NEW function to add below update_volunteer_online
+def _notify_queued_matches(db, vol_id: str):
+    """
+    When a volunteer comes online, find any suggested matches that were
+    created while they were offline and flip notify_immediately = True.
+    Your notification/FCM system watches for this flag.
+    """
+    pending = (
+        db.collection("matches")
+          .where("volunteer_id",    "==", vol_id)
+          .where("status",          "==", "suggested")
+          .where("notify_immediately", "==", False)    # was offline when matched
+          .stream()
+    )
+    batch = db.batch()
+    for doc in pending:
+        batch.update(doc.reference, {
+            "notify_immediately":  True,
+            "notified_at":         firestore.SERVER_TIMESTAMP,
+        })
+    batch.commit()
 
 
 # ══════════════════════════════════════════════

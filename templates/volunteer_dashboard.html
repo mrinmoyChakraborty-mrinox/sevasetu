@@ -27,7 +27,46 @@
   </script>
 
   <!-- Our custom stylesheet-->
-  <link rel="stylesheet" href="/static/css/volunteer_dashboard.css"/> 
+  <link rel="stylesheet" href="/static/css/volunteer_dashboard.css"/>
+
+  <style>
+    /* ── Online/Offline toggle visual fix ── */
+    .toggle-track {
+      display: flex;
+      align-items: center;
+      width: 48px;
+      height: 26px;
+      border-radius: 999px;
+      background: #006c44;       /* green = online default */
+      padding: 3px;
+      cursor: pointer;
+      transition: background 0.25s ease;
+      justify-content: flex-end; /* thumb right = online */
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.15);
+    }
+    .toggle-thumb {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #ffffff;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+      transition: all 0.25s ease;
+      flex-shrink: 0;
+    }
+    .status-toggle {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+    .status-label {
+      font-size: .82rem;
+      font-weight: 700;
+      color: #006c44;
+      min-width: 46px;
+      transition: color 0.2s;
+    }
+  </style>
 </head>
 <body>
 <div id="all-tasks-modal" class="modal-backdrop" onclick="closeOnBackdrop(event,'all-tasks-modal')">
@@ -168,11 +207,11 @@
 
     <div class="modal-body">
 
-      <!-- Location bar -->
+      <!-- Location bar — updated dynamically -->
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;background:#f0faf5;padding:10px 14px;border-radius:10px;border:1px solid rgba(0,108,68,.1);">
         <span class="material-symbols-outlined" style="color:#006c44;font-size:18px;">my_location</span>
-        <span style="font-size:.83rem;font-weight:600;color:#3e4942;">Currently viewing <strong>HSR Layout Sector 2</strong></span>
-        <span style="margin-left:auto;font-size:.72rem;font-weight:700;color:#006c44;background:rgba(0,108,68,.08);padding:3px 10px;border-radius:99px;">12 tasks nearby</span>
+        <span style="font-size:.83rem;font-weight:600;color:#3e4942;">Currently viewing <strong id="mapModalLocation">Detecting…</strong></span>
+        <span id="mapModalTaskCount" style="margin-left:auto;font-size:.72rem;font-weight:700;color:#006c44;background:rgba(0,108,68,.08);padding:3px 10px;border-radius:99px;">Loading…</span>
       </div>
 
       <!-- Full map image with pins -->
@@ -264,8 +303,8 @@
     <!-- ── WELCOME BAR ──────────────────────────────────── -->
     <section class="welcome-bar fu fu-1">
       <div>
-        <h2 id="welcomeHeading">Hello, Arjun! Ready to make a difference? 🌱</h2>
-        <p>There are 12 new requests in your neighbourhood today.</p>
+        <h2 id="welcomeHeading"></h2>
+        <p id="welcomeSub" style="color:#6e7a71;font-size:.88rem;margin-top:4px;"></p>
       </div>
       <!-- Online / Offline toggle -->
       <div class="status-toggle">
@@ -287,7 +326,7 @@
         </div>
         <div>
           <div class="stat-label">Tasks Matched</div>
-          <div class="stat-num" id="statMatched">24</div>
+          <div class="stat-num" id="statMatched"></div>
         </div>
       </div>
 
@@ -298,7 +337,7 @@
         </div>
         <div>
           <div class="stat-label">Completed</div>
-          <div class="stat-num" id="statCompleted">158</div>
+          <div class="stat-num" id="statCompleted"></div>
         </div>
       </div>
 
@@ -309,7 +348,7 @@
         </div>
         <div>
           <div class="stat-label">Your Rating</div>
-          <div class="stat-num" id="statRating">4.9</div>
+          <div class="stat-num" id="statRating"></div>
         </div>
       </div>
 
@@ -330,43 +369,7 @@
         </div>
 
         <div class="task-stack" id="tasksForYou">
-
-          <!-- Task Card 1 — High Urgency -->
-          <div class="task-card">
-            <div class="task-top">
-              <span class="urgency-chip uc-high"><span class="uc-dot"></span>High Urgency</span>
-              <span class="task-dist"><span class="material-symbols-outlined">distance</span>0.8 km away</span>
-            </div>
-            <div class="task-name">Deliver Groceries to Senior Center</div>
-            <div class="task-org">Helping Hands Foundation · Koramangala, Block 4</div>
-            <div class="task-tags">
-              <span class="task-tag">Logistics</span>
-              <span class="task-tag">Driving</span>
-            </div>
-            <div class="task-actions">
-              <button class="btn-accept">Accept Task</button>
-              <button class="btn-decline">Decline</button>
-            </div>
-          </div>
-
-          <!-- Task Card 2 — Medium Urgency -->
-          <div class="task-card">
-            <div class="task-top">
-              <span class="urgency-chip uc-mid"><span class="uc-dot"></span>Medium Urgency</span>
-              <span class="task-dist"><span class="material-symbols-outlined">distance</span>2.4 km away</span>
-            </div>
-            <div class="task-name">Teach Basic Computer Literacy</div>
-            <div class="task-org">Vidya Outreach · Indiranagar</div>
-            <div class="task-tags">
-              <span class="task-tag">Education</span>
-              <span class="task-tag">Tech</span>
-            </div>
-            <div class="task-actions">
-              <button class="btn-accept">Accept Task</button>
-              <button class="btn-decline">Decline</button>
-            </div>
-          </div>
-
+          <!-- populated by volunteer_dashboard.js after API load -->
         </div>
       </div>
 
@@ -413,53 +416,7 @@
       </div>
 
       <div class="accepted-grid" id="acceptedTasksGrid">
-
-        <!-- Ongoing Task 1 -->
-        <div class="accepted-card">
-          <div class="accepted-top">
-            <div>
-              <div class="accepted-name">Community Tree Planting</div>
-              <div class="accepted-due">Due in 2 days</div>
-            </div>
-            <span class="status-chip sc-green">In Progress</span>
-          </div>
-          <div>
-            <div class="progress-label">
-              <span>Setup Phase</span>
-              <span>65%</span>
-            </div>
-            <div class="progress-track">
-              <div class="progress-fill" style="width:65%;"></div>
-            </div>
-          </div>
-          <button class="view-details-btn">
-            View Details <span class="material-symbols-outlined">arrow_forward</span>
-          </button>
-        </div>
-
-        <!-- Ongoing Task 2 -->
-        <div class="accepted-card">
-          <div class="accepted-top">
-            <div>
-              <div class="accepted-name">Digital Workshop for Youth</div>
-              <div class="accepted-due">Starts Tomorrow</div>
-            </div>
-            <span class="status-chip sc-amber">Confirmed</span>
-          </div>
-          <div>
-            <div class="progress-label">
-              <span>Preparation</span>
-              <span>20%</span>
-            </div>
-            <div class="progress-track">
-              <div class="progress-fill" style="width:20%;"></div>
-            </div>
-          </div>
-          <button class="view-details-btn">
-            View Details <span class="material-symbols-outlined">arrow_forward</span>
-          </button>
-        </div>
-
+        <!-- populated by volunteer_dashboard.js after API load -->
       </div>
     </section>
 

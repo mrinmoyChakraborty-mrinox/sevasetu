@@ -1,21 +1,45 @@
 /* =====================================================
-   volunteer_dashboard.js
-   Handles: dashboard data load, stats, task cards,
-            accept/decline actions, Ola Maps modal,
-            online toggle, task status updates
+   volunteer_dashboard.js  (patched)
+   Fixes:
+   ① Proper skeleton loading — static "Arjun" content
+     is replaced with skeletons on init, real data
+     renders only after the API responds.
+   ② All-tasks modal + map modal are fully dynamic —
+     populated from the same API data, no stale HTML.
+   ③ Online / offline toggle actually changes visually.
    ===================================================== */
 
-const OLA_MAPS_API_KEY = "cRtJZjnZnTH4ugwi0vxlaaiW436RH5LRwMNS6F7h";
+let OLA_MAPS_API_KEY = null;
+
+async function loadOlaMapsKey() {
+  try {
+    const res = await fetch("/api/get_ola_maps_key");
+    if (!res.ok) throw new Error("Failed to fetch key");
+
+    const data = await res.json();
+    OLA_MAPS_API_KEY = data.OLA_MAPS_API_KEY;
+
+  } catch (err) {
+    console.error("Error loading Ola Maps key:", err);
+  }
+}
+// Store tasks globally so modals can reference them
+// even when opened after initial load
+let _allMatchedTasks = [];
 
 // ─────────────────────────────────────────────
-// 1. INIT
+// 1. INIT — skeletons fire BEFORE any API call
 // ─────────────────────────────────────────────
 
 document.addEventListener("DOMContentLoaded", () => {
+  // Show skeletons immediately so no static HTML is visible
+  showSkeletons();
+  await loadOlaMapsKey();   // 🔥 FIRST load key
   loadDashboard();
   initOnlineToggle();
   initNavDropdown();
   initKeyboardEscape();
+  wireStaticModalButtons();
 });
 
 
@@ -24,8 +48,6 @@ document.addEventListener("DOMContentLoaded", () => {
 // ─────────────────────────────────────────────
 
 async function loadDashboard() {
-  showSkeletons();
-
   try {
     const res = await fetch("/api/volunteer/dashboard");
 
@@ -38,12 +60,20 @@ async function loadDashboard() {
 
     const data = await res.json();
 
+    // Store globally for lazy modal usage
+    _allMatchedTasks = data.matched_tasks || [];
+
     renderWelcome(data.volunteer_name);
     renderStats(data.stats);
-    renderTasksForYou(data.matched_tasks);
+    renderTasksForYou(_allMatchedTasks);
     renderAcceptedTasks(data.accepted_tasks);
-    // 2. CALL THE MINIMAP FUNCTION HERE! 
-    initMiniMap(data.matched_tasks);
+    initMiniMap(_allMatchedTasks);
+
+    // Pre-populate the all-tasks modal body NOW (lazy — hidden)
+    populateAllTasksModal(_allMatchedTasks);
+
+    // Update the location bar in map modal
+    updateMapModalBar(_allMatchedTasks.length);
 
   } catch (err) {
     console.error("Dashboard error:", err);
@@ -59,9 +89,14 @@ async function loadDashboard() {
 function renderWelcome(name) {
   const el = document.getElementById("welcomeHeading");
   if (!el) return;
-  const hour     = new Date().getHours();
-  const emoji    = hour < 12 ? "🌅" : hour < 17 ? "🌱" : "🌙";
+  const hour  = new Date().getHours();
+  const emoji = hour < 12 ? "🌅" : hour < 17 ? "🌱" : "🌙";
   el.textContent = `Hello, ${name || "there"}! Ready to make a difference? ${emoji}`;
+
+  const sub = document.getElementById("welcomeSub");
+  if (sub && _allMatchedTasks.length > 0) {
+    sub.textContent = `There are ${_allMatchedTasks.length} new requests in your neighbourhood today.`;
+  }
 }
 
 
@@ -71,6 +106,12 @@ function renderWelcome(name) {
 
 function renderStats(stats) {
   if (!stats) return;
+
+  // Remove skeleton pulse once data arrives
+  ["statMatched","statCompleted","statRating"].forEach(id => {
+    document.getElementById(id)?.classList.remove("skel-pulse");
+  });
+
   animateCounter("statMatched",   stats.tasks_matched   || 0);
   animateCounter("statCompleted", stats.tasks_completed || 0);
   setRating("statRating",         stats.rating          || 0);
@@ -98,7 +139,7 @@ function setRating(id, value) {
 
 
 // ─────────────────────────────────────────────
-// 5. TASKS FOR YOU (matched, pending acceptance)
+// 5. TASKS FOR YOU
 // ─────────────────────────────────────────────
 
 function renderTasksForYou(tasks) {
@@ -115,16 +156,9 @@ function renderTasksForYou(tasks) {
     return;
   }
 
-  // Show 2 in dashboard, rest in modal
-  container.innerHTML = tasks.slice(0, 2).map(task =>
-    buildTaskCard(task)
-  ).join("");
-
-  // Wire up accept/decline on newly rendered cards
+  // Show first 2 on main page
+  container.innerHTML = tasks.slice(0, 2).map(task => buildTaskCard(task)).join("");
   wireTaskActions(container);
-
-  // Populate the "View All" modal too
-  populateAllTasksModal(tasks);
 }
 
 function buildTaskCard(task) {
@@ -154,13 +188,26 @@ function buildTaskCard(task) {
     </div>`;
 }
 
+// ── "View All" modal — populated dynamically ──────────────
+
 function populateAllTasksModal(tasks) {
   const container = document.getElementById("allTasksBody");
   if (!container) return;
 
-  document.getElementById("allTasksCount").textContent =
-    `${tasks.length} tasks available in your area today`;
+  const countEl = document.getElementById("allTasksCount");
 
+  if (!tasks || tasks.length === 0) {
+    if (countEl) countEl.textContent = "No tasks available in your area right now.";
+    container.innerHTML = `
+      <div style="padding:32px;text-align:center;color:#6e7a71;">
+        <span class="material-symbols-outlined" style="font-size:2.5rem;display:block;margin-bottom:8px;">search_off</span>
+        <p style="font-weight:600;">Nothing matched yet.</p>
+        <p style="font-size:.82rem;margin-top:4px;">Check back soon!</p>
+      </div>`;
+    return;
+  }
+
+  if (countEl) countEl.textContent = `${tasks.length} task${tasks.length !== 1 ? "s" : ""} available in your area today`;
   container.innerHTML = tasks.map(task => buildTaskCard(task)).join("");
   wireTaskActions(container);
 }
@@ -176,7 +223,7 @@ function wireTaskActions(container) {
 
 
 // ─────────────────────────────────────────────
-// 6. ACCEPTED TASKS (in progress)
+// 6. ACCEPTED TASKS
 // ─────────────────────────────────────────────
 
 function renderAcceptedTasks(tasks) {
@@ -193,8 +240,8 @@ function renderAcceptedTasks(tasks) {
   }
 
   container.innerHTML = tasks.map(task => {
-    const progress = task.progress_pct || 0;
-    const statusCls = task.status === "in_progress" ? "sc-green" : "sc-amber";
+    const progress    = task.progress_pct || 0;
+    const statusCls   = task.status === "in_progress" ? "sc-green" : "sc-amber";
     const statusLabel = task.status === "in_progress" ? "In Progress" : "Confirmed";
     return `
       <div class="accepted-card" data-task-id="${escHtml(task.id)}">
@@ -215,7 +262,7 @@ function renderAcceptedTasks(tasks) {
           </div>
         </div>
         <button class="view-details-btn"
-                onclick="window.location.href='/volunteer/task/${task.id}'">
+                onclick="window.location.href='/volunteer/task/${escHtml(task.id)}'">
           View Details
           <span class="material-symbols-outlined">arrow_forward</span>
         </button>
@@ -231,38 +278,34 @@ function renderAcceptedTasks(tasks) {
 async function acceptTask(taskId, btn) {
   if (!taskId) return;
 
-  const original = btn.textContent;
-  btn.disabled   = true;
+  const original  = btn.textContent;
+  btn.disabled    = true;
   btn.textContent = "Accepting...";
 
   try {
-    const res = await fetch(`/api/volunteer/task/${taskId}/accept`, {
-      method: "POST"
-    });
-
+    const res = await fetch(`/api/volunteer/task/${taskId}/accept`, { method: "POST" });
     if (!res.ok) throw new Error();
 
-    btn.textContent = "✓ Accepted!";
-    btn.style.background = "#059669";
+    btn.textContent       = "✓ Accepted!";
+    btn.style.background  = "#059669";
 
-    // Remove card from "Tasks For You" after short delay
+    // Remove ALL cards with this id (main + modal)
     setTimeout(() => {
-      const card = document.querySelector(`.task-card[data-task-id="${taskId}"]`);
-      if (card) {
+      document.querySelectorAll(`.task-card[data-task-id="${taskId}"]`).forEach(card => {
         card.style.opacity    = "0";
         card.style.transition = "opacity .3s";
-        setTimeout(() => {
-          card.remove();
-          // Reload accepted tasks section
-          loadDashboard();
-        }, 300);
-      }
+        setTimeout(() => card.remove(), 300);
+      });
+      // Remove from global list and repopulate modal
+      _allMatchedTasks = _allMatchedTasks.filter(t => t.id !== taskId);
+      populateAllTasksModal(_allMatchedTasks);
+      loadDashboard();
     }, 800);
 
     showToast("Task accepted! The NGO has been notified.", "success");
 
   } catch {
-    btn.disabled   = false;
+    btn.disabled    = false;
     btn.textContent = original;
     showToast("Failed to accept task. Please try again.", "error");
   }
@@ -271,25 +314,30 @@ async function acceptTask(taskId, btn) {
 async function declineTask(taskId, btn) {
   if (!taskId) return;
 
-  btn.disabled   = true;
+  btn.disabled    = true;
   btn.textContent = "...";
 
   try {
     await fetch(`/api/volunteer/task/${taskId}/decline`, { method: "POST" });
   } catch {}
 
-  const card = document.querySelector(`.task-card[data-task-id="${taskId}"]`);
-  if (card) {
-    card.style.opacity    = "0.35";
+  // Remove ALL matching cards (main + modal) 
+  document.querySelectorAll(`.task-card[data-task-id="${taskId}"]`).forEach(card => {
+    card.style.opacity       = "0.35";
     card.style.pointerEvents = "none";
-    card.style.transition = "opacity .3s";
+    card.style.transition    = "opacity .3s";
     setTimeout(() => card.remove(), 1500);
-  }
+  });
+
+  // Remove from global list and update modal count
+  _allMatchedTasks = _allMatchedTasks.filter(t => t.id !== taskId);
+  const countEl = document.getElementById("allTasksCount");
+  if (countEl) countEl.textContent = `${_allMatchedTasks.length} tasks available in your area today`;
 }
 
 
 // ─────────────────────────────────────────────
-// 8. OLA MAPS — NEEDS NEAR YOU (mini map)
+// 8. OLA MAPS — MINI MAP
 // ─────────────────────────────────────────────
 
 let miniMapInstance = null;
@@ -303,13 +351,12 @@ function initMiniMap(needs) {
   miniMapInstance = olaMaps.init({
     style:       "https://api.olamaps.io/tiles/vector/v1/styles/default-light-standard/style.json",
     container:   "miniMap",
-    center:      [77.5946, 12.9716],  // default Bengaluru
+    center:      [77.5946, 12.9716],
     zoom:        12,
-    interactive: false   // mini map — not interactive
+    interactive: false
   });
 
   miniMapInstance.on("load", () => {
-    // Add need pins
     (needs || []).filter(n => n.lat && n.lng).forEach(need => {
       const color = need.urgency_score >= 8 ? "#a83639"
                   : need.urgency_score >= 5 ? "#855300"
@@ -322,13 +369,11 @@ function initMiniMap(needs) {
         border:2px solid white;box-shadow:0 2px 8px rgba(0,0,0,.2);
       `;
 
-      olaMaps
-        .addMarker({ element: pinEl })
-        .setLngLat([need.lng, need.lat])
-        .addTo(miniMapInstance);
+      olaMaps.addMarker({ element: pinEl })
+             .setLngLat([need.lng, need.lat])
+             .addTo(miniMapInstance);
     });
 
-    // Centre on user location if available
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(pos => {
         miniMapInstance.setCenter([pos.coords.longitude, pos.coords.latitude]);
@@ -350,6 +395,9 @@ async function updateLocationLabel(lat, lng) {
       const part = addr.split(",")[0];
       const el   = document.getElementById("currentLocation");
       if (el) el.textContent = part;
+      // Also update map modal location bar
+      const barEl = document.getElementById("mapModalLocation");
+      if (barEl) barEl.textContent = part;
     }
   } catch {}
 }
@@ -359,7 +407,7 @@ async function updateLocationLabel(lat, lng) {
 // 9. OLA MAPS — FULL MAP MODAL
 // ─────────────────────────────────────────────
 
-let fullMapInstance  = null;
+let fullMapInstance    = null;
 let fullMapInitialized = false;
 
 function initFullMap(needs) {
@@ -391,19 +439,17 @@ function initFullMap(needs) {
         cursor:pointer;
       `;
 
-      const popup = olaMaps
-        .addPopup({ closeButton: false, offset: [0, -32] })
+      const popup = olaMaps.addPopup({ closeButton: false, offset: [0, -32] })
         .setHTML(`
           <div style="font-family:'Plus Jakarta Sans',sans-serif;min-width:160px;">
             <p style="font-weight:700;font-size:.82rem;margin:0 0 4px;">${escHtml(need.title)}</p>
-            <p style="font-size:.73rem;color:#3e4942;margin:0;">${escHtml(need.ngo_name || "")} · ${escHtml(need.distance_km || "")} km</p>
+            <p style="font-size:.73rem;color:#3e4942;margin:0;">${escHtml(need.ngo_name || "")} · ${need.distance_km ? need.distance_km + " km" : "Nearby"}</p>
           </div>`);
 
-      olaMaps
-        .addMarker({ element: pinEl })
-        .setLngLat([need.lng, need.lat])
-        .addTo(fullMapInstance)
-        .on("click", () => popup.setLngLat([need.lng, need.lat]).addTo(fullMapInstance));
+      olaMaps.addMarker({ element: pinEl })
+             .setLngLat([need.lng, need.lat])
+             .addTo(fullMapInstance)
+             .on("click", () => popup.setLngLat([need.lng, need.lat]).addTo(fullMapInstance));
     });
 
     if (navigator.geolocation) {
@@ -413,6 +459,11 @@ function initFullMap(needs) {
       }, () => {});
     }
   });
+}
+
+function updateMapModalBar(count) {
+  const countEl = document.getElementById("mapModalTaskCount");
+  if (countEl) countEl.textContent = `${count} task${count !== 1 ? "s" : ""} nearby`;
 }
 
 
@@ -426,11 +477,11 @@ function openModal(id) {
   el.classList.add("open");
   document.body.style.overflow = "hidden";
 
-  // Init full map when modal opens (lazy)
+  // Lazy-init full map only when map modal first opens
   if (id === "map-modal") {
     setTimeout(() => {
       fullMapInstance?.resize?.();
-      if (!fullMapInitialized) initFullMap(window._dashNeeds || []);
+      if (!fullMapInitialized) initFullMap(_allMatchedTasks);
     }, 150);
   }
 }
@@ -446,32 +497,41 @@ function closeOnBackdrop(event, id) {
   if (event.target === document.getElementById(id)) closeModal(id);
 }
 
-// Buttons already in HTML using onclick — expose globally
-window.openModal  = openModal;
-window.closeModal = closeModal;
+window.openModal       = openModal;
+window.closeModal      = closeModal;
 window.closeOnBackdrop = closeOnBackdrop;
 
-document.getElementById("view-all-btn")?.addEventListener("click",    () => openModal("all-tasks-modal"));
-document.getElementById("close-tasks-modal")?.addEventListener("click",() => closeModal("all-tasks-modal"));
-document.getElementById("find-task-btn")?.addEventListener("click",   () => openModal("map-modal"));
-document.getElementById("close-map-modal")?.addEventListener("click", () => closeModal("map-modal"));
+function wireStaticModalButtons() {
+  document.getElementById("view-all-btn")?.addEventListener("click",    () => openModal("all-tasks-modal"));
+  document.getElementById("close-tasks-modal")?.addEventListener("click",() => closeModal("all-tasks-modal"));
+  document.getElementById("find-task-btn")?.addEventListener("click",   () => openModal("map-modal"));
+  document.getElementById("close-map-modal")?.addEventListener("click", () => closeModal("map-modal"));
+}
 
 
 // ─────────────────────────────────────────────
-// 11. ONLINE / OFFLINE TOGGLE
+// 11. ONLINE / OFFLINE TOGGLE  ← FIXED
+// The toggle needs:
+//   • .toggle-track   — the pill background
+//   • .toggle-thumb   — the white circle
+//   • .status-label   — "Online" / "Offline" text
+//   • .status-toggle  — outer wrapper (gets "offline" class for colour)
 // ─────────────────────────────────────────────
 
 function initOnlineToggle() {
   const track  = document.querySelector(".toggle-track");
+  const thumb  = document.querySelector(".toggle-thumb");
   const label  = document.querySelector(".status-label");
+  const wrapper = document.querySelector(".status-toggle");
   if (!track) return;
 
+  // Start as online
   let isOnline = true;
+  applyToggleState(isOnline, track, thumb, label, wrapper);
 
   track.addEventListener("click", async () => {
     isOnline = !isOnline;
-    track.classList.toggle("offline", !isOnline);
-    if (label) label.textContent = isOnline ? "Online" : "Offline";
+    applyToggleState(isOnline, track, thumb, label, wrapper);
 
     try {
       await fetch("/api/volunteer/status", {
@@ -481,6 +541,36 @@ function initOnlineToggle() {
       });
     } catch {}
   });
+}
+
+function applyToggleState(isOnline, track, thumb, label, wrapper) {
+  if (isOnline) {
+    // Green pill, thumb right
+    track.style.background    = "#006c44";
+    track.style.justifyContent = "flex-end";
+    if (thumb) {
+      thumb.style.background = "#ffffff";
+      thumb.style.transform  = "translateX(0)";
+    }
+    if (label) {
+      label.textContent = "Online";
+      label.style.color = "#006c44";
+    }
+    wrapper?.classList.remove("offline");
+  } else {
+    // Grey pill, thumb left
+    track.style.background    = "#bdcabf";
+    track.style.justifyContent = "flex-start";
+    if (thumb) {
+      thumb.style.background = "#ffffff";
+      thumb.style.transform  = "translateX(0)";
+    }
+    if (label) {
+      label.textContent = "Offline";
+      label.style.color = "#6e7a71";
+    }
+    wrapper?.classList.add("offline");
+  }
 }
 
 
@@ -518,24 +608,89 @@ function initKeyboardEscape() {
 
 
 // ─────────────────────────────────────────────
-// 14. SKELETON LOADERS
+// 14. SKELETON LOADERS — replaces all static HTML
 // ─────────────────────────────────────────────
 
 function showSkeletons() {
-  ["statMatched","statCompleted"].forEach(id => {
+  // Welcome bar
+  const heading = document.getElementById("welcomeHeading");
+  if (heading) {
+    heading.innerHTML = `<span class="skel-line" style="width:55%;height:28px;display:inline-block;border-radius:6px;background:#e2e8f0;animation:skelPulse 1.4s ease infinite;"></span>`;
+  }
+  const sub = document.getElementById("welcomeSub");
+  if (sub) {
+    sub.innerHTML = `<span class="skel-line" style="width:40%;height:16px;display:inline-block;border-radius:6px;background:#e2e8f0;animation:skelPulse 1.4s ease infinite;"></span>`;
+  }
+
+  // Stats
+  ["statMatched","statCompleted","statRating"].forEach(id => {
     const el = document.getElementById(id);
-    if (el) { el.textContent = "—"; el.classList.add("animate-pulse"); }
+    if (el) {
+      el.innerHTML = `<span style="display:inline-block;width:44px;height:32px;background:#e2e8f0;border-radius:6px;animation:skelPulse 1.4s ease infinite;"></span>`;
+    }
   });
 
+  // Tasks for you — skeleton cards
   const tfy = document.getElementById("tasksForYou");
   if (tfy) {
     tfy.innerHTML = [1,2].map(() => `
-      <div class="task-card" style="opacity:.5;">
-        <div style="height:14px;background:#e5e7eb;border-radius:6px;width:40%;margin-bottom:10px;"></div>
-        <div style="height:18px;background:#e5e7eb;border-radius:6px;width:80%;margin-bottom:8px;"></div>
-        <div style="height:12px;background:#e5e7eb;border-radius:6px;width:60%;margin-bottom:12px;"></div>
-        <div style="height:36px;background:#e5e7eb;border-radius:9999px;"></div>
+      <div class="task-card" style="pointer-events:none;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:12px;">
+          <span style="width:110px;height:22px;background:#e2e8f0;border-radius:99px;display:inline-block;animation:skelPulse 1.4s ease infinite;"></span>
+          <span style="width:60px;height:18px;background:#e2e8f0;border-radius:6px;display:inline-block;animation:skelPulse 1.4s ease infinite;"></span>
+        </div>
+        <div style="width:80%;height:20px;background:#e2e8f0;border-radius:6px;margin-bottom:8px;animation:skelPulse 1.4s ease infinite;"></div>
+        <div style="width:55%;height:14px;background:#e2e8f0;border-radius:6px;margin-bottom:14px;animation:skelPulse 1.4s ease infinite;"></div>
+        <div style="display:flex;gap:8px;margin-bottom:16px;">
+          <span style="width:70px;height:24px;background:#e2e8f0;border-radius:99px;animation:skelPulse 1.4s ease infinite;display:inline-block;"></span>
+          <span style="width:70px;height:24px;background:#e2e8f0;border-radius:99px;animation:skelPulse 1.4s ease infinite;display:inline-block;"></span>
+        </div>
+        <div style="height:40px;background:#e2e8f0;border-radius:99px;animation:skelPulse 1.4s ease infinite;"></div>
       </div>`).join("");
+  }
+
+  // Accepted tasks grid — skeleton
+  const atg = document.getElementById("acceptedTasksGrid");
+  if (atg) {
+    atg.innerHTML = [1,2].map(() => `
+      <div class="accepted-card" style="pointer-events:none;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:16px;">
+          <div style="flex:1;">
+            <div style="width:70%;height:18px;background:#e2e8f0;border-radius:6px;margin-bottom:8px;animation:skelPulse 1.4s ease infinite;"></div>
+            <div style="width:40%;height:13px;background:#e2e8f0;border-radius:6px;animation:skelPulse 1.4s ease infinite;"></div>
+          </div>
+          <span style="width:80px;height:24px;background:#e2e8f0;border-radius:99px;animation:skelPulse 1.4s ease infinite;display:inline-block;"></span>
+        </div>
+        <div style="height:8px;background:#e2e8f0;border-radius:99px;margin-bottom:14px;animation:skelPulse 1.4s ease infinite;"></div>
+        <div style="height:36px;background:#e2e8f0;border-radius:10px;animation:skelPulse 1.4s ease infinite;"></div>
+      </div>`).join("");
+  }
+
+  // Also blank-out the all-tasks modal body (already has static HTML in file)
+  const allBody = document.getElementById("allTasksBody");
+  if (allBody) {
+    allBody.innerHTML = [1,2,3].map(() => `
+      <div class="task-card" style="pointer-events:none;">
+        <div style="width:120px;height:22px;background:#e2e8f0;border-radius:99px;margin-bottom:12px;animation:skelPulse 1.4s ease infinite;"></div>
+        <div style="width:75%;height:18px;background:#e2e8f0;border-radius:6px;margin-bottom:8px;animation:skelPulse 1.4s ease infinite;"></div>
+        <div style="width:50%;height:13px;background:#e2e8f0;border-radius:6px;margin-bottom:16px;animation:skelPulse 1.4s ease infinite;"></div>
+        <div style="height:38px;background:#e2e8f0;border-radius:99px;animation:skelPulse 1.4s ease infinite;"></div>
+      </div>`).join("");
+  }
+  const allCount = document.getElementById("allTasksCount");
+  if (allCount) allCount.textContent = "Loading tasks…";
+
+  // Inject keyframe animation once if not already present
+  if (!document.getElementById("skel-style")) {
+    const s = document.createElement("style");
+    s.id = "skel-style";
+    s.textContent = `
+      @keyframes skelPulse {
+        0%,100% { opacity:1; }
+        50%      { opacity:.45; }
+      }
+    `;
+    document.head.appendChild(s);
   }
 }
 
@@ -568,8 +723,8 @@ function showToast(message, type = "success") {
   container.appendChild(toast);
 
   setTimeout(() => {
-    toast.style.opacity   = "0";
-    toast.style.transform = "translateX(100%)";
+    toast.style.opacity    = "0";
+    toast.style.transform  = "translateX(100%)";
     toast.style.transition = "all .3s ease";
     setTimeout(() => toast.remove(), 300);
   }, 4000);
@@ -603,10 +758,10 @@ function showDashboardError() {
 function getUrgencyChip(label, score) {
   const l = (label || "").toUpperCase();
   const s = score || 0;
-  if (l === "CRITICAL" || s >= 8) return { cls: "uc-high",  label: "High Urgency" };
-  if (l === "HIGH"     || s >= 6) return { cls: "uc-high",  label: "High Urgency" };
-  if (l === "MEDIUM"   || s >= 4) return { cls: "uc-mid",   label: "Medium Urgency" };
-  return                                  { cls: "uc-low",   label: "Low Urgency" };
+  if (l === "CRITICAL" || s >= 8) return { cls: "uc-high", label: "High Urgency" };
+  if (l === "HIGH"     || s >= 6) return { cls: "uc-high", label: "High Urgency" };
+  if (l === "MEDIUM"   || s >= 4) return { cls: "uc-mid",  label: "Medium Urgency" };
+  return                                  { cls: "uc-low",  label: "Low Urgency" };
 }
 
 function escHtml(str) {

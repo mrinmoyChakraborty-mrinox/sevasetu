@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Field Reports | SevaSetu</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+tailwind.config = {
+  theme: { extend: {
+    colors: {
+      "primary":"#006c44","primary-container":"#4caf7d","primary-fixed":"#93f7bf","primary-fixed-dim":"#77daa4",
+      "on-primary":"#ffffff","on-primary-container":"#003d25","on-primary-fixed":"#002112","on-primary-fixed-variant":"#005232",
+      "secondary":"#855300","secondary-container":"#fea619","secondary-fixed":"#ffddb8","secondary-fixed-dim":"#ffb95f",
+      "on-secondary":"#ffffff","on-secondary-container":"#684000","on-secondary-fixed":"#2a1700","on-secondary-fixed-variant":"#653e00",
+      "tertiary":"#a83639","tertiary-container":"#fa7272","tertiary-fixed":"#ffdad8","tertiary-fixed-dim":"#ffb3b0",
+      "on-tertiary":"#ffffff","on-tertiary-container":"#6d0714","on-tertiary-fixed":"#410006","on-tertiary-fixed-variant":"#881d24",
+      "surface":"#f8f9ff","surface-dim":"#d0dbed","surface-bright":"#f8f9ff","surface-variant":"#d9e3f6",
+      "surface-container-lowest":"#ffffff","surface-container-low":"#eff4ff","surface-container":"#e6eeff",
+      "surface-container-high":"#dee9fc","surface-container-highest":"#d9e3f6",
+      "on-surface":"#121c2a","on-surface-variant":"#3e4942",
+      "outline":"#6e7a71","outline-variant":"#bdcabf",
+      "background":"#f8f9ff","on-background":"#121c2a",
+      "error":"#ba1a1a","error-container":"#ffdad6","on-error":"#ffffff","on-error-container":"#93000a",
+      "inverse-surface":"#27313f","inverse-on-surface":"#eaf1ff","inverse-primary":"#77daa4",
+      "surface-tint":"#006c44"
+    },
+    fontFamily:{"headline":["Plus Jakarta Sans"],"body":["Plus Jakarta Sans"]},
+    borderRadius:{"DEFAULT":"1rem","lg":"2rem","xl":"3rem","full":"9999px"}
+  }}
+}
+</script>
+<style>
+  body { font-family: 'Plus Jakarta Sans', sans-serif; background: #f4f7f4; }
+  .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+  body::before {
+    content:''; position:fixed; inset:0; z-index:-1;
+    background-image: radial-gradient(circle, rgba(0,108,68,0.04) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+  .fade-up { animation: fadeUp 0.4s ease both; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spin { animation: spin 1s linear infinite; }
+  @keyframes skelPulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+  .skel { background:#e2e8f0; border-radius:6px; animation:skelPulse 1.4s ease infinite; }
+</style>
+</head>
+<body class="text-on-surface min-h-screen">
+
+<!-- ══ HEADER ══ -->
+<header class="sticky top-0 z-50 bg-surface/80 backdrop-blur-md shadow-[0_20px_40px_rgba(0,108,68,0.06)]">
+  <div class="flex justify-between items-center w-full px-6 py-4 max-w-7xl mx-auto">
+    <div class="flex items-center gap-2.5">
+      <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-primary-container flex items-center justify-center shadow shadow-primary/25">
+        <span class="material-symbols-outlined text-white" style="font-size:16px;font-variation-settings:'FILL' 1">volunteer_activism</span>
+      </div>
+      <span class="text-xl font-extrabold text-emerald-900 tracking-tighter">SevaSetu</span>
+    </div>
+    <nav class="hidden md:flex items-center gap-6 text-sm font-semibold">
+      <a href="/ngo/dashboard" class="text-on-surface-variant hover:text-primary transition-colors">Dashboard</a>
+      <a href="/ngo/reports" class="text-primary border-b-2 border-primary pb-0.5">Field Reports</a>
+      <a href="/ngo/needs" class="text-on-surface-variant hover:text-primary transition-colors">Needs</a>
+    </nav>
+    <div class="flex items-center gap-3">
+      <button class="p-2 text-on-surface-variant hover:bg-emerald-50 rounded-full transition-all">
+        <span class="material-symbols-outlined">notifications</span>
+      </button>
+      <a href="/ngo/dashboard" class="px-5 py-2 bg-surface-container-highest text-on-surface rounded-full text-sm font-bold hover:bg-surface-container-high transition-colors flex items-center gap-1">
+        <span class="material-symbols-outlined text-sm">arrow_back</span> Dashboard
+      </a>
+    </div>
+  </div>
+</header>
+
+<!-- ══ MAIN ══ -->
+<main class="max-w-7xl mx-auto px-6 py-10 space-y-10 pb-24">
+
+  <!-- Page Header -->
+  <header class="flex flex-col md:flex-row md:items-end justify-between gap-6 fade-up">
+    <div>
+      <p class="text-xs font-bold uppercase tracking-widest text-primary mb-1">NGO Dashboard</p>
+      <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight text-on-surface">Field Reports</h1>
+      <p class="text-on-surface-variant mt-1">AI-powered extraction from your uploaded documents.</p>
+    </div>
+    <button onclick="window.location.href='/ngo/dashboard'"
+            class="px-6 py-3 bg-primary text-on-primary rounded-full font-bold flex items-center gap-2 hover:opacity-90 shadow-md">
+      <span class="material-symbols-outlined">upload</span>
+      Upload Report
+    </button>
+  </header>
+
+  <!-- Stats Row -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6 fade-up" style="animation-delay:.07s">
+    <div class="bg-surface-container-lowest p-6 rounded-xl shadow-[0_20px_40px_rgba(0,108,68,0.05)] flex items-center gap-4 relative overflow-hidden">
+      <div class="w-14 h-14 bg-primary-fixed/40 rounded-2xl flex items-center justify-center text-primary flex-shrink-0">
+        <span class="material-symbols-outlined text-3xl">analytics</span>
+      </div>
+      <div>
+        <p class="text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-1">Total Reports</p>
+        <p class="text-3xl font-black text-on-surface" id="statTotal">—</p>
+      </div>
+    </div>
+    <div class="bg-surface-container-lowest p-6 rounded-xl shadow-[0_20px_40px_rgba(0,108,68,0.05)] flex items-center gap-4 relative overflow-hidden">
+      <div class="w-14 h-14 bg-secondary-fixed/60 rounded-2xl flex items-center justify-center text-secondary flex-shrink-0">
+        <span class="material-symbols-outlined text-3xl">hourglass_bottom</span>
+      </div>
+      <div>
+        <p class="text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-1">Processing</p>
+        <p class="text-3xl font-black text-on-surface" id="statProcessing">—</p>
+      </div>
+    </div>
+    <div class="bg-surface-container-lowest p-6 rounded-xl shadow-[0_20px_40px_rgba(0,108,68,0.05)] flex items-center gap-4 relative overflow-hidden">
+      <div class="w-14 h-14 bg-tertiary-fixed/60 rounded-2xl flex items-center justify-center text-tertiary flex-shrink-0">
+        <span class="material-symbols-outlined text-3xl">verified</span>
+      </div>
+      <div>
+        <p class="text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-1">Needs Created</p>
+        <p class="text-3xl font-black text-on-surface" id="statNeeds">—</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reports Table -->
+  <div class="bg-surface-container-lowest rounded-xl shadow-[0_20px_40px_rgba(0,108,68,0.05)] overflow-hidden fade-up" style="animation-delay:.14s">
+    <div class="px-8 py-5 flex items-center justify-between border-b border-outline-variant/10">
+      <h2 class="text-lg font-bold text-on-surface">Uploaded Reports</h2>
+      <div class="flex items-center bg-surface-container-high px-4 py-2 rounded-full border border-outline-variant/20 gap-2">
+        <span class="material-symbols-outlined text-on-surface-variant text-sm">search</span>
+        <input id="searchInput" class="bg-transparent border-none focus:ring-0 text-sm w-48 p-0 outline-none" placeholder="Search reports..." type="text"/>
+      </div>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse">
+        <thead class="bg-surface-container-low">
+          <tr>
+            <th class="px-8 py-4 text-xs font-bold text-on-surface-variant uppercase tracking-widest">File</th>
+            <th class="px-8 py-4 text-xs font-bold text-on-surface-variant uppercase tracking-widest">Uploaded</th>
+            <th class="px-8 py-4 text-xs font-bold text-on-surface-variant uppercase tracking-widest">Status</th>
+            <th class="px-8 py-4 text-xs font-bold text-on-surface-variant uppercase tracking-widest text-right">Action</th>
+          </tr>
+        </thead>
+        <tbody id="reportsTableBody" class="divide-y divide-outline-variant/10">
+          <!-- Skeleton rows shown while loading -->
+          <tr><td colspan="4" class="px-8 py-6">
+            <div class="space-y-4">
+              ${[1,2,3].map(()=>`<div class="flex items-center gap-4"><div class="skel w-10 h-10 rounded-lg flex-shrink-0"></div><div class="flex-1 space-y-2"><div class="skel h-4 w-1/2"></div><div class="skel h-3 w-1/4"></div></div></div>`).join('')}
+            </div>
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div id="tablePagination" class="px-8 py-4 flex items-center justify-between bg-surface-container-low/30 border-t border-outline-variant/10 hidden">
+      <p id="paginationInfo" class="text-xs font-medium text-on-surface-variant"></p>
+    </div>
+  </div>
+
+</main>
+
+<!-- Mobile Nav -->
+<nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 px-6 py-3 z-50 flex justify-around items-center">
+  <a href="/ngo/dashboard" class="flex flex-col items-center text-slate-400 gap-0.5">
+    <span class="material-symbols-outlined text-xl">dashboard</span>
+    <span class="text-[10px] font-bold">Dash</span>
+  </a>
+  <a href="/ngo/reports" class="flex flex-col items-center text-primary gap-0.5">
+    <span class="material-symbols-outlined text-xl" style="font-variation-settings:'FILL' 1">description</span>
+    <span class="text-[10px] font-bold">Reports</span>
+  </a>
+  <a href="/ngo/needs" class="flex flex-col items-center text-slate-400 gap-0.5">
+    <span class="material-symbols-outlined text-xl">volunteer_activism</span>
+    <span class="text-[10px] font-bold">Needs</span>
+  </a>
+  <a href="/ngo/dashboard" class="flex flex-col items-center text-slate-400 gap-0.5">
+    <span class="material-symbols-outlined text-xl">settings</span>
+    <span class="text-[10px] font-bold">Settings</span>
+  </a>
+</nav>
+
+<script>
+// ── file icon by extension ──────────────────────────────────
+function fileIcon(name) {
+  const ext = (name || '').split('.').pop().toLowerCase();
+  const m = {pdf:'description',docx:'article',xlsx:'table_chart',jpg:'image',jpeg:'image',png:'image'};
+  const icon = m[ext] || 'insert_drive_file';
+  const color = {pdf:'bg-emerald-100 text-emerald-800',docx:'bg-blue-100 text-blue-800',xlsx:'bg-orange-100 text-orange-800',jpg:'bg-purple-100 text-purple-800',jpeg:'bg-purple-100 text-purple-800',png:'bg-purple-100 text-purple-800'}[ext] || 'bg-slate-100 text-slate-700';
+  return {icon, color};
+}
+
+function formatDate(ts) {
+  if (!ts) return '—';
+  const d = ts._seconds ? new Date(ts._seconds*1000) : new Date(ts);
+  return d.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+}
+
+function formatSize(bytes) {
+  if (!bytes) return '';
+  return bytes > 1048576 ? (bytes/1048576).toFixed(1)+' MB' : (bytes/1024).toFixed(0)+' KB';
+}
+
+function statusBadge(status) {
+  if (status === 'processed' || status === 'done') {
+    return `<div class="inline-flex items-center gap-2 px-3 py-1 bg-primary-fixed-dim/30 text-primary rounded-full text-xs font-bold">
+      <div class="w-1.5 h-1.5 rounded-full bg-primary"></div>Processed</div>`;
+  }
+  if (status === 'processing') {
+    return `<div class="inline-flex items-center gap-2 px-3 py-1 bg-secondary-fixed/30 text-secondary rounded-full text-xs font-bold animate-pulse">
+      <span class="material-symbols-outlined text-[14px] spin">sync</span>Processing</div>`;
+  }
+  if (status === 'failed') {
+    return `<div class="inline-flex items-center gap-2 px-3 py-1 bg-error-container text-error rounded-full text-xs font-bold">
+      <span class="material-symbols-outlined text-[14px]">error</span>Failed</div>`;
+  }
+  return `<div class="inline-flex items-center gap-2 px-3 py-1 bg-surface-container-high text-on-surface-variant rounded-full text-xs font-bold">
+    <div class="w-1.5 h-1.5 rounded-full bg-outline"></div>Pending</div>`;
+}
+
+function actionBtn(report) {
+  const s = report.status;
+  if (s === 'processed' || s === 'done') {
+    return `<a href="/ngo/upload/review/${report.id}" class="bg-primary text-on-primary px-5 py-2 rounded-full text-xs font-bold hover:opacity-90 active:scale-95 transition-all shadow-sm">
+      Review Needs</a>`;
+  }
+  if (s === 'processing') {
+    return `<a href="/ngo/upload/processing/${report.id}" class="text-primary font-bold text-xs hover:underline px-5 py-2">
+      View Progress</a>`;
+  }
+  return `<span class="text-on-surface-variant text-xs px-5 py-2 opacity-40">—</span>`;
+}
+
+// ── Load reports from API ────────────────────────────────────
+let allReports = [];
+
+async function loadReports() {
+  try {
+    const res = await fetch('/api/ngo/reports');
+    if (res.status === 401) { window.location.href = '/getstarted'; return; }
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    allReports = data.reports || [];
+    renderStats(data);
+    renderTable(allReports);
+  } catch {
+    document.getElementById('reportsTableBody').innerHTML = `
+      <tr><td colspan="4" class="px-8 py-12 text-center">
+        <p class="text-on-surface font-bold">Failed to load reports</p>
+        <button onclick="loadReports()" class="mt-3 px-6 py-2 bg-primary text-white rounded-full font-bold text-sm">Retry</button>
+      </td></tr>`;
+  }
+}
+
+function renderStats(data) {
+  document.getElementById('statTotal').textContent      = data.total || allReports.length;
+  document.getElementById('statProcessing').textContent = data.processing || allReports.filter(r=>r.status==='processing').length;
+  document.getElementById('statNeeds').textContent      = data.needs_created || '—';
+}
+
+function renderTable(reports) {
+  const tbody = document.getElementById('reportsTableBody');
+  if (!reports.length) {
+    tbody.innerHTML = `<tr><td colspan="4" class="px-8 py-16 text-center">
+      <span class="material-symbols-outlined text-5xl text-outline-variant block mb-3">folder_open</span>
+      <p class="font-bold text-on-surface">No reports yet</p>
+      <p class="text-sm text-on-surface-variant mt-1">Upload a field report to get started.</p>
+    </td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = reports.map(r => {
+    const {icon, color} = fileIcon(r.file_name || r.image_url || '');
+    return `<tr class="hover:bg-surface-container-low/50 transition-colors group">
+      <td class="px-8 py-5">
+        <div class="flex items-center gap-4">
+          <div class="w-10 h-10 rounded-lg ${color} flex items-center justify-center flex-shrink-0">
+            <span class="material-symbols-outlined">${icon}</span>
+          </div>
+          <div>
+            <p class="font-bold text-on-surface">${escHtml(r.file_name || 'report')}</p>
+            <p class="text-xs text-on-surface-variant">${formatSize(r.file_size)} ${r.file_type ? '• '+r.file_type : ''}</p>
+          </div>
+        </div>
+      </td>
+      <td class="px-8 py-5 text-on-surface-variant font-medium text-sm">${formatDate(r.uploaded_at)}</td>
+      <td class="px-8 py-5">${statusBadge(r.status)}</td>
+      <td class="px-8 py-5 text-right">${actionBtn(r)}</td>
+    </tr>`;
+  }).join('');
+
+  const info = document.getElementById('paginationInfo');
+  info.textContent = `Showing ${reports.length} report${reports.length!==1?'s':''}`;
+  document.getElementById('tablePagination').classList.remove('hidden');
+}
+
+// ── Search ───────────────────────────────────────────────────
+document.getElementById('searchInput').addEventListener('input', function() {
+  const q = this.value.toLowerCase();
+  renderTable(allReports.filter(r => (r.file_name||'').toLowerCase().includes(q)));
+});
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// Poll every 10s to refresh processing status
+loadReports();
+setInterval(() => {
+  if (allReports.some(r => r.status === 'processing')) loadReports();
+}, 10000);
+</script>
+</body>
+</html>
