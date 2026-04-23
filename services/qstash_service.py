@@ -154,18 +154,25 @@ receiver = Receiver(
 
 def verify_qstash_signature(request_body: bytes, signature_header: str) -> bool:
     if not os.environ.get("QSTASH_CURRENT_SIGNING_KEY"):
-        return True # Skip in local dev
+        return True
         
     try:
-        # Convert bytes to string, which is what the Receiver SDK expects
-        body_str = request_body.decode('utf-8')
+        # 1. Log the inputs
+        logger.info(f"Verifying signature: {signature_header[:10]}...")
         
-        return receiver.verify(
-            body=body_str,
+        # 2. Verify
+        is_valid = receiver.verify(
+            body=request_body.decode('utf-8'), # The SDK needs a string
             signature=signature_header
         )
+        
+        if not is_valid:
+            logger.error("Verification returned False (Keys might be wrong)")
+            
+        return is_valid
+        
     except Exception as e:
-        logger.error(f"Signature verification error: {e}")
+        logger.error(f"Signature verification system error: {e}")
         return False
 
 # ═════════════════════════════════════════════════════════════════════════════
