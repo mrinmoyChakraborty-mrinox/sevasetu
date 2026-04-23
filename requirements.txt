@@ -3,5 +3,6 @@ firebase-admin
 python-dotenv
 requests
 google-generativeai
+google-genai
 python-docx
 imagekitio
