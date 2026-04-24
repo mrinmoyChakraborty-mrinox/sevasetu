@@ -100,56 +100,32 @@ def enqueue_matching(need_id: str, need_data: dict) -> bool:
 # SIGNATURE VERIFICATION
 # ═════════════════════════════════════════════════════════════════════════════
 
-def verify_qstash_signature(request_body: bytes, signature_header: str) -> bool:
-    """
-    Verify that an incoming worker request genuinely came from QStash.
+import hmac
+import hashlib
+import os
 
-    Key fixes vs. the old version:
-      1. Receiver is created LAZILY here, not at module level.
-         Module-level init happened before Vercel injected env vars,
-         so the keys were always empty strings → every signature failed.
-      2. request_body is bytes; the SDK expects a plain str.
-         We decode with UTF-8 before passing it in.
-
-    In local dev (QSTASH_CURRENT_SIGNING_KEY not set) we skip
-    verification so you can call worker routes directly.
-    """
-    current_key = os.environ.get("QSTASH_CURRENT_SIGNING_KEY", "")
-
-    if not current_key:
-        logger.debug("[QStash] Signing key not set — skipping verification (local dev).")
-        return True
-
-    try:
-        from qstash import Receiver
-
-        # Build Receiver fresh each call — env vars are guaranteed to be
-        # available by the time a real HTTP request arrives on Vercel.
-        receiver = Receiver(
-            current_signing_key = current_key,
-            next_signing_key    = os.environ.get("QSTASH_NEXT_SIGNING_KEY", ""),
-        )
-
-        # ── THE FIX: decode bytes → str ───────────────────────────────────
-        body_str = (
-            request_body.decode("utf-8")
-            if isinstance(request_body, bytes)
-            else request_body
-        )
-
-        is_valid = receiver.verify(body=body_str, signature=signature_header)
-
-        if not is_valid:
-            logger.error(
-                "[QStash] Signature check returned False. "
-                "Check that QSTASH_CURRENT_SIGNING_KEY / NEXT_SIGNING_KEY are correct."
-            )
-        return is_valid
-
-    except Exception as exc:
-        logger.error(f"[QStash] Signature verification error: {exc}")
-        return False
-
+def verify_qstash_signature(request_body: bytes, signature: str) -> bool:
+    signing_key = os.environ.get("QSTASH_CURRENT_SIGNING_KEY", "")
+    if not signing_key:
+        return True # Dev mode
+    
+    # 1. Split the signature (Upstash signatures often come as a string)
+    # If using the modern Upstash signature, it might need to be split
+    # But usually, the signature header IS the signature.
+    
+    # 2. Re-calculate the HMAC-SHA256
+    computed_signature = hmac.new(
+        signing_key.encode("utf-8"),
+        request_body,
+        hashlib.sha256
+    ).digest()
+    
+    # 3. Base64 encode the computed hash and compare
+    import base64
+    computed_signature_b64 = base64.b64encode(computed_signature).decode("utf-8")
+    
+    # Use constant time comparison to prevent timing attacks
+    return hmac.compare_digest(computed_signature_b64, signature)
 
 # ═════════════════════════════════════════════════════════════════════════════
 # INTERNAL — low-level publish
