@@ -1,11 +1,21 @@
 """
 services/gemini_service.py
-════════════════════════════════════════════════════════════════
-Uses Gemini 1.5 Flash to extract community needs from field reports.
-Supports: PDF images (via ImageKit URL), DOCX text, raw text.
+════════════════════════════════════════════════════════════════════
+Extracts community needs from NGO field reports using Gemini 2.5 Flash.
 
-Returns a list of need dicts matching the Firestore schema in
-firebase_services.save_extracted_needs_draft().
+Supported file types
+────────────────────
+  PDF   → sent as native PDF via Part.from_uri  (all pages, up to 1000)
+  JPG / PNG → sent as image via Part.from_uri
+  DOCX  → downloaded, text extracted, sent as plain text prompt
+
+FIX LOG
+───────
+v2  Single SDK: google.genai only (not mixed with google.generativeai).
+    generation_config was built but never passed to generate_content — fixed.
+    Thinking budget (8192) now actually applied.
+    DOCX path now also passes generation_config.
+    Removed dead _pdf_first_page_bytes() helper (no longer needed).
 """
 
 import os
@@ -15,7 +25,6 @@ import re
 
 logger = logging.getLogger(__name__)
 
-# ── Gemini model to use ──────────────────────────────────────
 GEMINI_MODEL = "gemini-2.5-flash"
 
 
@@ -23,70 +32,113 @@ GEMINI_MODEL = "gemini-2.5-flash"
 # PUBLIC ENTRY POINT
 # ══════════════════════════════════════════════════════════════
 
-
-import google.generativeai as genai
-from google.genai import types   # new SDK uses google.genai
-
 def extract_needs_from_url(image_url: str, file_type: str = "") -> list[dict]:
-    ft        = (file_type or "").lower().strip(".")
-    mime_type = "application/pdf" if ft == "pdf" else \
-                "image/png"       if ft == "png" else \
-                "image/jpeg"      # default for jpg/jpeg/unknown
+    """
+    Main entry point called by the QStash worker.
+
+    Parameters
+    ----------
+    image_url : str   Public URL of the uploaded report (ImageKit CDN)
+    file_type : str   Extension without dot, e.g. "PDF", "JPG", "DOCX"
+                      (already stored in Firestore by the upload route)
+
+    Returns
+    -------
+    list[dict]  List of extracted need dicts (may be empty on error)
+    """
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
+        logger.error("[Gemini] GEMINI_API_KEY not set.")
         return []
+
+    # ── Only import the new SDK ────────────────────────────────────────────
+    from google import genai
+    from google.genai import types
 
     client = genai.Client(api_key=api_key)
 
-    # Detect whether this is a PDF or an image
-    lower_url = image_url.lower().split("?")[0]   # strip query params before checking
-    is_pdf    = lower_url.endswith(".pdf")
-    mime_type = "application/pdf" if is_pdf else _detect_image_mime(lower_url)
-    # In generate_content call inside extract_needs_from_url:
-    generation_config = genai.types.GenerationConfig(
+    ft = (file_type or "").lower().strip(".")
+
+    # ── Resolve MIME type from the stored file_type ────────────────────────
+    # Prefer the stored file_type over URL sniffing — ImageKit URLs often
+    # have query params or transformation segments that obscure the extension.
+    if ft == "pdf":
+        mime_type = "application/pdf"
+    elif ft == "png":
+        mime_type = "image/png"
+    else:
+        # jpg / jpeg / unknown image → JPEG is the safe default for ImageKit
+        mime_type = "image/jpeg"
+
+    # Fallback: if file_type was empty, sniff from the URL
+    if not ft:
+        lower_url = image_url.lower().split("?")[0]
+        mime_type = _detect_image_mime(lower_url)
+
+    # ── Generation config: JSON output + thinking ON ──────────────────────
+    # Thinking (budget=8192) is critical for vague field reports where
+    # urgency / skills are implied rather than stated explicitly.
+    generation_config = types.GenerateContentConfig(
         response_mime_type = "application/json",
-        thinking_config    = {"thinking_budget": 8192}  # mid-range, enough for inference
+        thinking_config    = types.ThinkingConfig(thinking_budget=8192),
     )
+
     try:
+        # ── DOCX: download + extract text, then send as plain text ────────
         if ft == "docx":
-            text = _extract_docx_text(image_url)   # download + parse
+            text = _extract_docx_text(image_url)
+            prompt = f"Field report content:\n\n{text}\n\n{_build_prompt()}"
             response = client.models.generate_content(
-                model    = "gemini-2.5-flash",
-                contents = [f"Field report content:\n\n{text}\n\n{_build_prompt()}"],
+                model    = GEMINI_MODEL,
+                contents = [prompt],
+                config   = generation_config,      # ← was missing before
             )
             return _parse_response(response.text.strip())
-        
+
+        # ── PDF / Image: let Gemini fetch the URL directly ─────────────────
         response = client.models.generate_content(
-            model    = "gemini-2.5-flash",
+            model    = GEMINI_MODEL,
             contents = [
                 types.Part.from_uri(
-                    file_uri  = image_url,   # Gemini fetches this itself — no download needed
+                    file_uri  = image_url,   # Gemini fetches this — no download needed
                     mime_type = mime_type,
                 ),
                 _build_prompt(),
             ],
+            config = generation_config,            # ← was missing before
         )
         return _parse_response(response.text.strip())
 
-    except Exception as e:
-        logger.error(f"Gemini extraction error: {e}")
+    except Exception as exc:
+        logger.error(f"[Gemini] Extraction error: {exc}", exc_info=True)
         return []
 
 
+# ══════════════════════════════════════════════════════════════
+# HELPERS
+# ══════════════════════════════════════════════════════════════
+
 def _detect_image_mime(url: str) -> str:
-    if url.endswith(".png"):  return "image/png"
-    if url.endswith(".jpg") or url.endswith(".jpeg"): return "image/jpeg"
-    return "image/jpeg"   # safe default for ImageKit URLs
+    """Fallback MIME detection from URL extension (no query params)."""
+    if url.endswith(".png"):
+        return "image/png"
+    if url.endswith(".jpg") or url.endswith(".jpeg"):
+        return "image/jpeg"
+    return "image/jpeg"   # safe default for ImageKit CDN URLs
 
 
 def _extract_docx_text(url: str) -> str:
+    """Download a DOCX from a URL and return its plain text (max 8000 chars)."""
     import urllib.request
     import io
-    from docx import Document   # pip install python-docx
+    from docx import Document
+
     with urllib.request.urlopen(url, timeout=15) as resp:
         data = resp.read()
-    doc  = Document(io.BytesIO(data))
+    doc = Document(io.BytesIO(data))
     return "\n".join(p.text for p in doc.paragraphs if p.text.strip())[:8000]
+
+
 # ══════════════════════════════════════════════════════════════
 # PROMPT
 # ══════════════════════════════════════════════════════════════
@@ -95,7 +147,7 @@ def _build_prompt() -> str:
     return """
 You are an AI assistant for SevaSetu, an NGO volunteer coordination platform.
 
-Analyze this field report image and extract ALL distinct community needs mentioned.
+Analyze this field report and extract ALL distinct community needs mentioned.
 For each need, output a JSON object.
 
 Return ONLY a valid JSON array. No markdown, no code fences, no explanations.
@@ -128,6 +180,10 @@ Required skills should be practical volunteer skills such as:
 First Aid, Medical, Teaching, Driving, Logistics, Counseling,
 Construction, Cooking, IT Support, Translation, etc.
 
+IMPORTANT: Use your full reasoning ability to infer urgency and skills from context.
+A report saying "children haven't eaten in two days" implies urgency 9, Food & Nutrition,
+skills: Cooking, Logistics, Child Welfare — even if none of those words appear explicitly.
+
 Extract as many distinct needs as mentioned in the report. Be specific.
 """
 
@@ -144,45 +200,41 @@ def _parse_response(raw: str) -> list[dict]:
     if not raw:
         return []
 
-    # Strip markdown code fences
     text = raw.strip()
+
+    # Strip markdown code fences if present
     if text.startswith("```"):
         lines = text.split("\n")
-        # Remove first and last fence lines
         if lines[0].startswith("```"):
             lines = lines[1:]
         if lines and lines[-1].strip() == "```":
             lines = lines[:-1]
         text = "\n".join(lines)
 
-    # Find JSON array
+    # Find the outermost JSON array
     match = re.search(r'\[.*\]', text, re.DOTALL)
     if not match:
-        logger.warning(f"No JSON array found in Gemini response: {text[:200]}")
+        logger.warning(f"[Gemini] No JSON array in response: {text[:200]}")
         return []
 
     json_str = match.group(0)
 
-    # Fix common JSON issues: trailing commas before } or ]
+    # Fix trailing commas before } or ]
     json_str = re.sub(r',\s*([}\]])', r'\1', json_str)
 
     try:
         needs = json.loads(json_str)
-    except json.JSONDecodeError as e:
-        logger.error(f"Failed to parse Gemini JSON: {e}\nRaw: {json_str[:400]}")
+    except json.JSONDecodeError as exc:
+        logger.error(f"[Gemini] JSON parse failed: {exc}\nRaw: {json_str[:400]}")
         return []
 
     if not isinstance(needs, list):
         return []
 
-    # Validate and sanitize each need
     sanitized = []
     for n in needs:
-        if not isinstance(n, dict):
+        if not isinstance(n, dict) or not n.get("title"):
             continue
-        if not n.get("title"):
-            continue
-
         sanitized.append({
             "title":               str(n.get("title", ""))[:120],
             "description":         str(n.get("description", "")),
@@ -198,7 +250,7 @@ def _parse_response(raw: str) -> list[dict]:
             "deadline_suggestion": str(n.get("deadline_suggestion", "planned")),
         })
 
-    logger.info(f"Gemini extracted {len(sanitized)} needs.")
+    logger.info(f"[Gemini] Extracted {len(sanitized)} needs.")
     return sanitized
 
 
@@ -207,22 +259,3 @@ def _to_int(val):
         return int(val) if val is not None else None
     except (TypeError, ValueError):
         return None
-
-
-# ══════════════════════════════════════════════════════════════
-# PDF HELPER (optional — only if PyMuPDF is installed)
-# ══════════════════════════════════════════════════════════════
-
-def _pdf_first_page_bytes(pdf_bytes: bytes) -> tuple[bytes, str]:
-    """Convert the first page of a PDF to a JPEG image bytes."""
-    try:
-        import fitz  # PyMuPDF
-        import io
-        doc  = fitz.open(stream=pdf_bytes, filetype="pdf")
-        page = doc.load_page(0)
-        mat  = fitz.Matrix(2.0, 2.0)   # 2x zoom for better OCR quality
-        pix  = page.get_pixmap(matrix=mat, alpha=False)
-        doc.close()
-        return pix.tobytes("jpeg"), "image/jpeg"
-    except ImportError:
-        raise RuntimeError("PyMuPDF not installed")
