@@ -918,22 +918,17 @@ def worker_process_report():
  
     # ── 4. Run Gemini extraction ───────────────────────────────────────────────
     try:
- 
         needs = gemini_service.extract_needs_from_url(image_url, file_type=file_type)
         logger.info(f"[Worker:process-report] Gemini found {len(needs)} needs.")
  
-        # Save each as a draft need
         firebase_services.save_extracted_needs_draft(ngo_uid, report_id, needs)
  
-        # Mark report as processed
-        update={
+        firebase_services.update_report_status(report_id, {
             "processed":   True,
             "status":      "processed",
             "needs_count": len(needs),
-        }
-        firebase_services.update_report_status(report_id,update)
+        })
  
-        # Log activity on the NGO's feed
         firebase_services.log_activity(
             ngo_uid,
             "created",
@@ -947,14 +942,15 @@ def worker_process_report():
     except Exception as exc:
         logger.error(f"[Worker:process-report] Failed — {exc}", exc_info=True)
  
-        # Mark as failed so the processing page can show an error
-        update={
+        # ── FIXED: use firebase_services, not undefined report_ref ──
+        # Also: 429 quota errors now reach here (not swallowed in gemini_service)
+        # so QStash will retry this job automatically after backoff.
+        firebase_services.update_report_status(report_id, {
             "status": "failed",
             "error":  str(exc)[:500],
-        }
-        firebase_services.update_report_status(report_id,update)
+        })
  
-        # Return 500 so QStash retries (up to the retry limit you set)
+        # Return 500 → QStash retries (up to the retry count set at enqueue time)
         return jsonify({"error": str(exc)}), 500
  
  

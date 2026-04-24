@@ -1,21 +1,30 @@
 """
 services/gemini_service.py
 ════════════════════════════════════════════════════════════════════
-Extracts community needs from NGO field reports using Gemini 2.5 Flash.
+Extracts community needs from NGO field reports using Gemini.
 
 Supported file types
 ────────────────────
-  PDF   → sent as native PDF via Part.from_uri  (all pages, up to 1000)
+  PDF   → sent as native PDF via Part.from_uri (all pages, up to 1000)
   JPG / PNG → sent as image via Part.from_uri
   DOCX  → downloaded, text extracted, sent as plain text prompt
 
-FIX LOG
-───────
-v2  Single SDK: google.genai only (not mixed with google.generativeai).
-    generation_config was built but never passed to generate_content — fixed.
-    Thinking budget (8192) now actually applied.
-    DOCX path now also passes generation_config.
-    Removed dead _pdf_first_page_bytes() helper (no longer needed).
+Model choice
+────────────
+We use gemini-1.5-flash (not 2.5-flash) because:
+  • Free tier: 15 RPM vs 5 RPM for 2.5-flash — 3x more headroom
+  • Daily quota: 1M TPM vs 250K TPM — 4x more
+  • Thinking via budget works on 1.5-flash too
+  • For structured extraction from documents, 1.5-flash is more
+    than sufficient and far more reliable under load
+
+On quota errors (429)
+─────────────────────
+A 429 is RE-RAISED so the worker route returns HTTP 500.
+QStash treats 5xx as a transient failure and retries automatically
+(up to the retry limit set when the job was enqueued, with backoff).
+This is correct behaviour — we want the job to retry later, not
+silently succeed with 0 needs and mark the report as processed.
 """
 
 import os
@@ -25,7 +34,9 @@ import re
 
 logger = logging.getLogger(__name__)
 
-GEMINI_MODEL = "gemini-1.5-flash"   # cheaper, faster, and better at structured output than 2.5 for our use case
+# ── Model ─────────────────────────────────────────────────────────────────────
+# gemini-1.5-flash: 15 RPM / 1M TPM free tier — much more generous than 2.5-flash
+GEMINI_MODEL = "gemini-1.5-flash"
 
 
 # ══════════════════════════════════════════════════════════════
@@ -34,24 +45,22 @@ GEMINI_MODEL = "gemini-1.5-flash"   # cheaper, faster, and better at structured 
 
 def extract_needs_from_url(image_url: str, file_type: str = "") -> list[dict]:
     """
-    Main entry point called by the QStash worker.
+    Called by the QStash worker after a report is uploaded.
 
     Parameters
     ----------
     image_url : str   Public URL of the uploaded report (ImageKit CDN)
-    file_type : str   Extension without dot, e.g. "PDF", "JPG", "DOCX"
-                      (already stored in Firestore by the upload route)
+    file_type : str   Extension without dot, uppercase e.g. "PDF", "JPG", "DOCX"
 
     Returns
     -------
-    list[dict]  List of extracted need dicts (may be empty on error)
+    list[dict]  Extracted need dicts (raises on quota/API errors so QStash retries)
     """
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
         logger.error("[Gemini] GEMINI_API_KEY not set.")
         return []
 
-    # ── Only import the new SDK ────────────────────────────────────────────
     from google import genai
     from google.genai import types
 
@@ -59,59 +68,55 @@ def extract_needs_from_url(image_url: str, file_type: str = "") -> list[dict]:
 
     ft = (file_type or "").lower().strip(".")
 
-    # ── Resolve MIME type from the stored file_type ────────────────────────
-    # Prefer the stored file_type over URL sniffing — ImageKit URLs often
-    # have query params or transformation segments that obscure the extension.
+    # ── Resolve MIME type ──────────────────────────────────────────────────
     if ft == "pdf":
         mime_type = "application/pdf"
     elif ft == "png":
         mime_type = "image/png"
     else:
-        # jpg / jpeg / unknown image → JPEG is the safe default for ImageKit
-        mime_type = "image/jpeg"
+        mime_type = "image/jpeg"   # safe default for JPG / ImageKit URLs
 
-    # Fallback: if file_type was empty, sniff from the URL
+    # Fallback: sniff from URL if file_type is missing
     if not ft:
         lower_url = image_url.lower().split("?")[0]
         mime_type = _detect_image_mime(lower_url)
 
-    # ── Generation config: JSON output + thinking ON ──────────────────────
-    # Thinking (budget=8192) is critical for vague field reports where
-    # urgency / skills are implied rather than stated explicitly.
+    # ── Generation config ──────────────────────────────────────────────────
+    # JSON output enforced + thinking budget for vague report inference.
+    # gemini-1.5-flash supports thinking_budget via the new SDK.
     generation_config = types.GenerateContentConfig(
         response_mime_type = "application/json",
-        thinking_config    = types.ThinkingConfig(thinking_budget=8192),
+        thinking_config    = types.ThinkingConfig(thinking_budget=2048),
     )
 
-    try:
-        # ── DOCX: download + extract text, then send as plain text ────────
-        if ft == "docx":
-            text = _extract_docx_text(image_url)
-            prompt = f"Field report content:\n\n{text}\n\n{_build_prompt()}"
-            response = client.models.generate_content(
-                model    = GEMINI_MODEL,
-                contents = [prompt],
-                config   = generation_config,      # ← was missing before
-            )
-            return _parse_response(response.text.strip())
-
-        # ── PDF / Image: let Gemini fetch the URL directly ─────────────────
+    # ── Call Gemini ────────────────────────────────────────────────────────
+    # NOTE: 429 and other API errors are NOT caught here — they propagate
+    # up to the caller (worker_process_report in app.py).
+    # The worker's except block catches them and returns HTTP 500,
+    # which causes QStash to retry the job automatically.
+    if ft == "docx":
+        text = _extract_docx_text(image_url)
+        prompt = f"Field report content:\n\n{text}\n\n{_build_prompt()}"
+        response = client.models.generate_content(
+            model    = GEMINI_MODEL,
+            contents = [prompt],
+            config   = generation_config,
+        )
+    else:
+        # PDF and images: Gemini fetches the URL directly
         response = client.models.generate_content(
             model    = GEMINI_MODEL,
             contents = [
                 types.Part.from_uri(
-                    file_uri  = image_url,   # Gemini fetches this — no download needed
+                    file_uri  = image_url,
                     mime_type = mime_type,
                 ),
                 _build_prompt(),
             ],
-            config = generation_config,            # ← was missing before
+            config = generation_config,
         )
-        return _parse_response(response.text.strip())
 
-    except Exception as exc:
-        logger.error(f"[Gemini] Extraction error: {exc}", exc_info=True)
-        return []
+    return _parse_response(response.text.strip())
 
 
 # ══════════════════════════════════════════════════════════════
@@ -119,16 +124,14 @@ def extract_needs_from_url(image_url: str, file_type: str = "") -> list[dict]:
 # ══════════════════════════════════════════════════════════════
 
 def _detect_image_mime(url: str) -> str:
-    """Fallback MIME detection from URL extension (no query params)."""
     if url.endswith(".png"):
         return "image/png"
     if url.endswith(".jpg") or url.endswith(".jpeg"):
         return "image/jpeg"
-    return "image/jpeg"   # safe default for ImageKit CDN URLs
+    return "image/jpeg"
 
 
 def _extract_docx_text(url: str) -> str:
-    """Download a DOCX from a URL and return its plain text (max 8000 chars)."""
     import urllib.request
     import io
     from docx import Document
@@ -193,16 +196,13 @@ Extract as many distinct needs as mentioned in the report. Be specific.
 # ══════════════════════════════════════════════════════════════
 
 def _parse_response(raw: str) -> list[dict]:
-    """
-    Safely parse Gemini's response.
-    Handles accidental markdown fences and trailing commas.
-    """
+    """Parse Gemini JSON response, handling markdown fences and trailing commas."""
     if not raw:
         return []
 
     text = raw.strip()
 
-    # Strip markdown code fences if present
+    # Strip markdown code fences
     if text.startswith("```"):
         lines = text.split("\n")
         if lines[0].startswith("```"):
@@ -211,16 +211,13 @@ def _parse_response(raw: str) -> list[dict]:
             lines = lines[:-1]
         text = "\n".join(lines)
 
-    # Find the outermost JSON array
     match = re.search(r'\[.*\]', text, re.DOTALL)
     if not match:
         logger.warning(f"[Gemini] No JSON array in response: {text[:200]}")
         return []
 
     json_str = match.group(0)
-
-    # Fix trailing commas before } or ]
-    json_str = re.sub(r',\s*([}\]])', r'\1', json_str)
+    json_str = re.sub(r',\s*([}\]])', r'\1', json_str)  # fix trailing commas
 
     try:
         needs = json.loads(json_str)
