@@ -29,7 +29,7 @@ import requests
 logger = logging.getLogger(__name__)
 
 # ── Constants ─────────────────────────────────────────────────────────────────
-QSTASH_PUBLISH_URL = "https://qstash.upstash.io/v2/publish"
+QSTASH_PUBLISH_URL = "https://qstash-us-east-1.upstash.io"
 _TOKEN             = None   # loaded lazily
 
 
