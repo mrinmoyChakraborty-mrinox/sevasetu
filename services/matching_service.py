@@ -64,7 +64,7 @@ logger = logging.getLogger(__name__)
 MAX_MATCHES_PER_NEED  = 5    # final match docs to write to Firestore
 PRE_SORT_POOL_SIZE    = 25   # max candidates forwarded to Gemini
 DEFAULT_RADIUS_KM     = 30   # fallback if volunteer has no radius set
-GEMINI_MODEL          = "gemini-2.5-flash"
+GEMINI_MODEL          = "gemini-2.0-flash"
 
 
 # ═════════════════════════════════════════════════════════════════════════════
