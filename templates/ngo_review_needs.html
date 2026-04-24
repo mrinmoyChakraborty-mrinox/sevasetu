@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Review Extracted Needs | SevaSetu</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+tailwind.config = { theme: { extend: {
+  colors: {
+    "primary":"#006c44","primary-container":"#4caf7d","primary-fixed":"#93f7bf","primary-fixed-dim":"#77daa4",
+    "on-primary":"#ffffff","on-primary-container":"#003d25","on-primary-fixed":"#002112","on-primary-fixed-variant":"#005232",
+    "secondary":"#855300","secondary-container":"#fea619","secondary-fixed":"#ffddb8","secondary-fixed-dim":"#ffb95f",
+    "on-secondary":"#ffffff","on-secondary-container":"#684000",
+    "tertiary":"#a83639","tertiary-container":"#fa7272","tertiary-fixed":"#ffdad8","tertiary-fixed-dim":"#ffb3b0",
+    "on-tertiary":"#ffffff","on-tertiary-container":"#6d0714","on-tertiary-fixed":"#410006","on-tertiary-fixed-variant":"#881d24",
+    "surface":"#f8f9ff","surface-container-lowest":"#ffffff","surface-container-low":"#eff4ff",
+    "surface-container":"#e6eeff","surface-container-high":"#dee9fc","surface-container-highest":"#d9e3f6",
+    "on-surface":"#121c2a","on-surface-variant":"#3e4942",
+    "outline":"#6e7a71","outline-variant":"#bdcabf","background":"#f8f9ff",
+    "error":"#ba1a1a","error-container":"#ffdad6","on-error":"#ffffff","on-error-container":"#93000a"
+  },
+  fontFamily:{"headline":["Plus Jakarta Sans"]},
+  borderRadius:{"DEFAULT":"1rem","lg":"2rem","xl":"3rem","full":"9999px"}
+}}}
+</script>
+<style>
+  body { font-family:'Plus Jakarta Sans',sans-serif; background:#f4f7f4; }
+  .material-symbols-outlined { font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24; }
+  body::before {
+    content:''; position:fixed; inset:0; z-index:-1;
+    background-image: radial-gradient(circle, rgba(0,108,68,0.04) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+  .fade-up { animation: fadeUp 0.45s ease both; }
+
+  .urgency-slider::-webkit-slider-runnable-track {
+    background: linear-gradient(to right, #4caf7d, #fea619, #fa7272);
+    height: 8px; border-radius: 4px;
+  }
+  .urgency-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; height: 20px; width: 20px;
+    border-radius: 50%; background: #ffffff; border: 2px solid #006c44;
+    margin-top: -6px; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  }
+  .urgency-slider { appearance: none; }
+
+  .toggle-btn { transition: background 0.2s; }
+  .toggle-btn.on  { background: #006c44; }
+  .toggle-btn.off { background: #dee9fc; }
+  .toggle-thumb { transition: transform 0.2s; }
+  .toggle-btn.on  .toggle-thumb { transform: translateX(24px); background: white; }
+  .toggle-btn.off .toggle-thumb { transform: translateX(2px);  background: #6e7a71; }
+
+  .need-card { transition: opacity 0.3s, box-shadow 0.2s; }
+  .need-card.excluded { opacity: 0.45; }
+  .need-card:hover { box-shadow: 0 24px 56px rgba(0,108,68,0.08); }
+
+  .skill-chip { display:flex; align-items:center; gap:4px; padding:4px 12px;
+    background: rgba(119,218,164,0.25); color:#005232; border-radius:99px;
+    font-size:.72rem; font-weight:700; }
+  .skill-chip button { cursor:pointer; color:#6e7a71; font-size:12px; line-height:1; }
+  .skill-chip button:hover { color:#a83639; }
+
+  .form-field { background:#eff4ff; border:none; border-radius:0.5rem; padding:10px 14px;
+    font-family:'Plus Jakarta Sans',sans-serif; font-size:.9rem; color:#121c2a;
+    outline:none; transition:box-shadow 0.2s; }
+  .form-field:focus { box-shadow:0 0 0 2px rgba(0,108,68,0.2); }
+
+  @keyframes skelPulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+  .skel { background:#e2e8f0; border-radius:6px; animation:skelPulse 1.4s ease infinite; }
+</style>
+</head>
+<body class="text-on-surface min-h-screen">
+
+<!-- Header -->
+<nav class="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-xl flex justify-between items-center px-8 h-20 shadow-[0_20px_40px_rgba(0,108,68,0.06)]">
+  <div class="flex items-center gap-2.5">
+    <span class="material-symbols-outlined text-primary text-3xl" style="font-variation-settings:'FILL' 1">energy_savings_leaf</span>
+    <span class="text-2xl font-bold text-primary tracking-[-0.02em]">SevaSetu</span>
+  </div>
+  <div class="hidden md:flex gap-6 text-sm font-semibold">
+    <a href="/ngo/dashboard" class="text-on-surface-variant hover:text-primary transition-colors px-4 py-2 rounded-full hover:bg-surface-container-low">Dashboard</a>
+    <a href="/ngo/reports"   class="text-primary font-bold border-b-2 border-primary px-4 py-2">Reports</a>
+  </div>
+  <button onclick="window.location.href='/ngo/reports'" class="p-2 rounded-full hover:bg-surface-container-low transition-colors text-on-surface-variant flex items-center gap-1 text-sm font-bold">
+    <span class="material-symbols-outlined">arrow_back</span> Back
+  </button>
+</nav>
+
+<!-- Main -->
+<main class="pt-28 pb-24 px-4 md:px-10 max-w-6xl mx-auto">
+
+  <!-- Page Header -->
+  <header class="mb-12 fade-up relative">
+    <div class="absolute -top-10 -left-6 w-32 h-32 bg-primary-container/10 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="flex items-center gap-3 mb-2">
+      <span class="material-symbols-outlined text-primary text-3xl" style="font-variation-settings:'FILL' 1">auto_awesome</span>
+      <h1 class="text-4xl md:text-5xl font-black tracking-tight text-on-surface">AI Analysis Complete</h1>
+    </div>
+    <p id="subheading" class="text-on-surface-variant text-lg font-medium">
+      Loading extracted needs…
+    </p>
+  </header>
+
+  <!-- Needs List -->
+  <div id="needsList" class="flex flex-col gap-8">
+    <!-- skeleton -->
+    <div class="need-card bg-surface-container-lowest rounded-xl p-8 shadow-[0_20px_40px_rgba(0,108,68,0.06)] relative overflow-hidden" style="pointer-events:none">
+      <div class="skel h-6 w-1/2 mb-4"></div>
+      <div class="skel h-4 w-full mb-2"></div>
+      <div class="skel h-4 w-3/4"></div>
+    </div>
+    <div class="need-card bg-surface-container-lowest rounded-xl p-8 shadow-[0_20px_40px_rgba(0,108,68,0.06)] relative overflow-hidden" style="pointer-events:none">
+      <div class="skel h-6 w-1/2 mb-4"></div>
+      <div class="skel h-4 w-full mb-2"></div>
+      <div class="skel h-4 w-3/4"></div>
+    </div>
+  </div>
+
+  <!-- Footer Actions -->
+  <footer id="footerActions" class="mt-16 flex flex-col items-center gap-5 hidden">
+    <div class="flex items-center gap-3 bg-surface-container-low rounded-full px-6 py-3 text-sm">
+      <span class="material-symbols-outlined text-primary text-base">check_circle</span>
+      <span id="includedCount" class="font-bold text-on-surface">0 needs</span>
+      <span class="text-on-surface-variant">selected to publish</span>
+    </div>
+    <button id="publishBtn"
+            class="w-full md:w-[420px] bg-gradient-to-r from-primary to-primary-container text-white text-lg font-bold py-5 rounded-full shadow-lg hover:shadow-primary/20 hover:-translate-y-1 transition-all active:scale-95 flex items-center justify-center gap-3">
+      Confirm &amp; Post All Needs
+      <span class="material-symbols-outlined">send</span>
+    </button>
+    <button onclick="window.location.href='/ngo/reports'" class="text-on-surface-variant font-semibold hover:text-primary transition-colors border-b-2 border-transparent hover:border-primary-container text-sm">
+      Back to Reports
+    </button>
+  </footer>
+
+</main>
+
+<!-- Toast -->
+<div id="toast-wrap" style="position:fixed;bottom:80px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:10px;"></div>
+
+<script>
+const reportId = window.location.pathname.split('/').pop();
+let needsData  = []; // [{id, included, ...fields}]
+
+const CATEGORIES = ['Healthcare','Education','Logistics','Food & Nutrition','Shelter','Mental Health','Water & Sanitation','Environment','Other'];
+
+// ── Urgency badge color ──────────────────────────────────────
+function urgencyBadgeClass(score) {
+  if (score >= 8) return 'bg-tertiary-fixed text-on-tertiary-fixed';
+  if (score >= 5) return 'bg-secondary-fixed text-on-secondary-container';
+  return 'bg-primary-fixed text-on-primary-fixed';
+}
+
+// ── Build a need card ────────────────────────────────────────
+function buildCard(need, idx) {
+  const accentColors = [
+    'bg-primary-container','bg-secondary-container','bg-tertiary-container',
+    'bg-primary-fixed-dim','bg-secondary-fixed-dim','bg-tertiary-fixed-dim'
+  ];
+  const accent = accentColors[idx % accentColors.length];
+
+  const skillChips = (need.required_skills || []).map(s => `
+    <span class="skill-chip" data-skill="${escHtml(s)}">
+      ${escHtml(s)}
+      <button type="button" onclick="removeSkill('${need.id}','${escHtml(s)}')" title="Remove skill">
+        <span class="material-symbols-outlined" style="font-size:13px">close</span>
+      </button>
+    </span>`).join('');
+
+  const catOptions = CATEGORIES.map(c =>
+    `<option ${c===need.category?'selected':''}>${c}</option>`
+  ).join('');
+
+  return `
+  <article class="need-card bg-surface-container-lowest rounded-xl p-8 shadow-[0_20px_40px_rgba(0,108,68,0.06)] relative overflow-hidden ${need.included?'':'excluded'}"
+           id="card-${need.id}" data-id="${need.id}">
+    <div class="absolute top-0 left-0 w-2 h-full ${accent} rounded-l-xl"></div>
+
+    <div class="flex flex-col lg:flex-row gap-8">
+      <!-- Left: editable fields -->
+      <div class="flex-1 space-y-5">
+        <!-- Title + Toggle -->
+        <div class="flex justify-between items-start gap-4">
+          <div class="flex-1">
+            <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-2">Title</label>
+            <input type="text" class="form-field w-full text-xl font-bold"
+                   value="${escHtml(need.title)}"
+                   onchange="updateField('${need.id}','title',this.value)"/>
+          </div>
+          <div class="flex items-center gap-2 pt-7 flex-shrink-0">
+            <span class="text-sm font-semibold text-on-surface-variant">Include</span>
+            <button type="button" class="toggle-btn ${need.included?'on':'off'} w-12 h-6 rounded-full relative"
+                    id="toggle-${need.id}"
+                    onclick="toggleInclude('${need.id}')">
+              <div class="toggle-thumb absolute top-1 w-4 h-4 rounded-full shadow"></div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Description -->
+        <div>
+          <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-2">Description</label>
+          <textarea class="form-field w-full resize-y" rows="3"
+                    onchange="updateField('${need.id}','description',this.value)">${escHtml(need.description||'')}</textarea>
+        </div>
+
+        <!-- Category + Location -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div>
+            <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-2">Category</label>
+            <select class="form-field w-full cursor-pointer"
+                    onchange="updateField('${need.id}','category',this.value)">${catOptions}</select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-2">Location</label>
+            <div class="relative">
+              <span class="material-symbols-outlined absolute left-3 top-3 text-on-surface-variant text-sm pointer-events-none">location_on</span>
+              <input type="text" class="form-field w-full pl-9"
+                     value="${escHtml(typeof need.location==='object'?(need.location.city||''):need.location||'')}"
+                     placeholder="e.g. Zone 4, Mumbai"
+                     onchange="updateField('${need.id}','location',this.value)"/>
+            </div>
+          </div>
+        </div>
+
+        <!-- Estimated People -->
+        <div>
+          <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-2">Estimated People Affected</label>
+          <input type="number" min="1" class="form-field w-40"
+                 value="${need.estimated_people||''}"
+                 placeholder="e.g. 120"
+                 onchange="updateField('${need.id}','estimated_people',parseInt(this.value)||null)"/>
+        </div>
+      </div>
+
+      <!-- Right: urgency + skills -->
+      <div class="w-full lg:w-72 space-y-7 bg-surface-container-low/60 p-6 rounded-xl border border-outline-variant/10">
+        <!-- Urgency Slider -->
+        <div>
+          <div class="flex justify-between items-center mb-4">
+            <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest">Urgency Level</label>
+            <span id="urgency-badge-${need.id}" class="px-3 py-1 rounded-full text-xs font-black ${urgencyBadgeClass(need.urgency_score||5)}">
+              ${need.urgency_score||5} / 10
+            </span>
+          </div>
+          <input type="range" min="1" max="10" class="urgency-slider w-full"
+                 value="${need.urgency_score||5}"
+                 id="urgency-slider-${need.id}"
+                 oninput="updateUrgency('${need.id}',this.value)"/>
+          <div class="flex justify-between mt-2 text-[10px] font-bold text-on-surface-variant opacity-60">
+            <span>LOW</span><span>HIGH</span>
+          </div>
+          ${need.urgency_inferred ? `
+          <p class="text-[10px] text-on-surface-variant mt-2 flex items-center gap-1 opacity-60">
+            <span class="material-symbols-outlined" style="font-size:11px">info</span>
+            AI inferred: ${escHtml(need.urgency_reason||'')}
+          </p>` : ''}
+        </div>
+
+        <!-- Skills -->
+        <div>
+          <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-3">Required Skills</label>
+          <div id="skills-${need.id}" class="flex flex-wrap gap-2 mb-3">
+            ${skillChips}
+          </div>
+          <div class="flex gap-2">
+            <input type="text" id="skill-input-${need.id}" class="form-field flex-1 text-sm" placeholder="Add skill…"
+                   onkeydown="if(event.key==='Enter'){addSkill('${need.id}');event.preventDefault();}"/>
+            <button type="button" onclick="addSkill('${need.id}')"
+                    class="px-3 py-2 bg-primary/10 text-primary rounded-lg font-bold text-sm hover:bg-primary/20 transition-colors">+</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </article>`;
+}
+
+// ── Toggle include ───────────────────────────────────────────
+function toggleInclude(id) {
+  const need = needsData.find(n => n.id === id);
+  if (!need) return;
+  need.included = !need.included;
+  const card   = document.getElementById(`card-${id}`);
+  const toggle = document.getElementById(`toggle-${id}`);
+  card.classList.toggle('excluded', !need.included);
+  toggle.className = `toggle-btn ${need.included?'on':'off'} w-12 h-6 rounded-full relative`;
+  updateIncludedCount();
+}
+
+// ── Update a field ───────────────────────────────────────────
+function updateField(id, field, value) {
+  const need = needsData.find(n => n.id === id);
+  if (need) need[field] = value;
+}
+
+// ── Urgency slider ───────────────────────────────────────────
+function updateUrgency(id, val) {
+  const score = parseInt(val);
+  const need  = needsData.find(n => n.id === id);
+  if (need) { need.urgency_score = score; need.urgency_label = score >= 8 ? 'HIGH' : score >= 5 ? 'MEDIUM' : 'LOW'; }
+  const badge = document.getElementById(`urgency-badge-${id}`);
+  if (badge) {
+    badge.textContent  = `${score} / 10`;
+    badge.className    = `px-3 py-1 rounded-full text-xs font-black ${urgencyBadgeClass(score)}`;
+  }
+}
+
+// ── Skills ───────────────────────────────────────────────────
+function addSkill(id) {
+  const input = document.getElementById(`skill-input-${id}`);
+  const skill = input.value.trim();
+  if (!skill) return;
+  const need = needsData.find(n => n.id === id);
+  if (!need) return;
+  if (!need.required_skills) need.required_skills = [];
+  if (need.required_skills.includes(skill)) { input.value = ''; return; }
+  need.required_skills.push(skill);
+  input.value = '';
+  const wrap = document.getElementById(`skills-${id}`);
+  const chip = document.createElement('span');
+  chip.className      = 'skill-chip';
+  chip.dataset.skill  = skill;
+  chip.innerHTML      = `${escHtml(skill)}<button type="button" onclick="removeSkill('${id}','${escHtml(skill)}')" title="Remove"><span class="material-symbols-outlined" style="font-size:13px">close</span></button>`;
+  wrap.appendChild(chip);
+}
+
+function removeSkill(id, skill) {
+  const need = needsData.find(n => n.id === id);
+  if (need) need.required_skills = (need.required_skills||[]).filter(s => s !== skill);
+  const wrap  = document.getElementById(`skills-${id}`);
+  const chips = wrap.querySelectorAll('.skill-chip');
+  chips.forEach(c => { if (c.dataset.skill === skill) c.remove(); });
+}
+
+// ── Count included ───────────────────────────────────────────
+function updateIncludedCount() {
+  const n = needsData.filter(x => x.included).length;
+  document.getElementById('includedCount').textContent = `${n} need${n!==1?'s':''}`;
+}
+
+// ── Load needs from API ──────────────────────────────────────
+async function loadNeeds() {
+  try {
+    const res = await fetch(`/api/ngo/report/${reportId}/needs`);
+    if (res.status === 401) { window.location.href = '/getstarted'; return; }
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+
+    needsData = (data.needs || []).map(n => ({ ...n, included: true }));
+
+    // Subheading
+    const fname = data.file_name || 'your report';
+    document.getElementById('subheading').innerHTML =
+      `We found <strong>${needsData.length}</strong> community need${needsData.length!==1?'s':''} in <span class="text-primary font-bold">${escHtml(fname)}</span>`;
+
+    // Render cards
+    document.getElementById('needsList').innerHTML =
+      needsData.length
+        ? needsData.map((n, i) => buildCard(n, i)).join('')
+        : `<div class="text-center py-20 text-on-surface-variant">
+             <span class="material-symbols-outlined text-5xl block mb-3">search_off</span>
+             <p class="font-bold">No needs were extracted from this report.</p>
+             <p class="text-sm mt-1">Try uploading a different document.</p>
+           </div>`;
+
+    updateIncludedCount();
+    document.getElementById('footerActions').classList.remove('hidden');
+  } catch {
+    document.getElementById('needsList').innerHTML = `
+      <div class="text-center py-20">
+        <p class="font-bold text-tertiary">Failed to load needs.</p>
+        <button onclick="loadNeeds()" class="mt-3 px-6 py-2 bg-primary text-white rounded-full font-bold text-sm">Retry</button>
+      </div>`;
+  }
+}
+
+// ── Publish ──────────────────────────────────────────────────
+document.getElementById('publishBtn').addEventListener('click', async () => {
+  const toPublish = needsData.filter(n => n.included);
+  if (!toPublish.length) { showToast('Select at least one need to publish.','error'); return; }
+
+  const btn = document.getElementById('publishBtn');
+  btn.disabled   = true;
+  btn.innerHTML  = `<span class="material-symbols-outlined spin">sync</span> Publishing…`;
+
+  try {
+    const res = await fetch(`/api/ngo/report/${reportId}/publish`, {
+      method:  'POST',
+      headers: {'Content-Type':'application/json'},
+      body:    JSON.stringify({ needs: toPublish })
+    });
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    showToast(`${toPublish.length} need${toPublish.length!==1?'s':''} published! Matching volunteers…`, 'success');
+    setTimeout(() => window.location.href = '/ngo/dashboard', 2000);
+  } catch {
+    btn.disabled  = false;
+    btn.innerHTML = `Confirm & Post All Needs <span class="material-symbols-outlined">send</span>`;
+    showToast('Failed to publish. Please try again.','error');
+  }
+});
+
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Toast
+function showToast(msg, type='success') {
+  const wrap = document.getElementById('toast-wrap');
+  const el   = document.createElement('div');
+  el.style.cssText = `background:white;border-left:4px solid ${type==='success'?'#006c44':'#ba1a1a'};
+    border-radius:.75rem;padding:14px 18px;box-shadow:0 8px 32px rgba(0,0,0,.12);
+    font-size:.875rem;font-weight:500;max-width:300px;cursor:pointer;
+    font-family:'Plus Jakarta Sans',sans-serif;color:#121c2a;`;
+  el.textContent = msg;
+  el.onclick = () => el.remove();
+  wrap.appendChild(el);
+  setTimeout(()=>{ el.style.opacity='0'; el.style.transition='opacity .3s'; setTimeout(()=>el.remove(),300); },4000);
+}
+
+// CSS for spin
+const st = document.createElement('style');
+st.textContent = `@keyframes spin{to{transform:rotate(360deg)}}.spin{animation:spin 1s linear infinite;display:inline-block}`;
+document.head.appendChild(st);
+
+// Init
+loadNeeds();
+</script>
+
+<div id="toast-wrap" style="position:fixed;bottom:80px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:10px;"></div>
+</body>
+</html>

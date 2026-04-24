@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SevaSetu Onboarding</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/volunteer_onboarding.css') }}" />
+</head>
+<body>
+  <div class="page">
+    <header class="topbar">
+      <div class="brand">SevaSetu</div>
+    </header>
+
+    <main class="content">
+      <section class="hero">
+        <div class="hero-icon">👤</div>
+        <div>
+          <h1>Become a Volunteer</h1>
+          <p>Let's tailor your experience to your strengths.</p>
+        </div>
+      </section>
+
+      <!-- Error / success message -->
+      <div id="formError" style="display:none;margin:0 0 16px;"></div>
+
+      <form id="onboardingForm" enctype="multipart/form-data">
+
+        <!-- Hidden lat/lng populated by map -->
+        <input type="hidden" id="latitude"  name="latitude"  value="12.9716"/>
+        <input type="hidden" id="longitude" name="longitude" value="77.5946"/>
+
+        <section class="profile-form-card">
+          <h2 class="form-title">Create Your Profile</h2>
+          <p class="form-sub">Let the community get to know the person behind the kindness.</p>
+
+          <div class="photo-upload">
+            <div class="photo-circle">
+              <span>📷</span>
+            </div>
+            <button type="button" class="photo-add">+</button>
+            <input type="file" id="photoInput" name="photo" accept="image/*" hidden />
+          </div>
+
+          <div class="form-group">
+            <label>FULL NAME</label>
+            <input type="text" id="fullName" name="name" placeholder="e.g. Aarav Sharma" />
+          </div>
+
+          <div class="form-group phone-group">
+            <label>PHONE NUMBER</label>
+            <div class="phone-wrap">
+              <span>+91</span>
+              <input type="text" id="phone" name="phone" placeholder="98765 43210" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>A LITTLE ABOUT YOU</label>
+            <textarea id="about" name="about" placeholder="Share your passions or why you'd like to help..."></textarea>
+            <small>Max 300 characters</small>
+          </div>
+        </section>
+
+        <section class="section">
+          <h3>SELECT YOUR SKILLS</h3>
+          <div class="chip-group" id="skillsGroup">
+            <button type="button" class="chip active" data-skill="First Aid">First Aid ✕</button>
+            <button type="button" class="chip active" data-skill="Teaching">Teaching ✕</button>
+            <button type="button" class="chip active" data-skill="Driving">Driving ✕</button>
+            <button type="button" class="chip" data-skill="Cooking">Cooking</button>
+            <button type="button" class="chip" data-skill="Construction">Construction</button>
+            <button type="button" class="chip" data-skill="Counseling">Counseling</button>
+            <button type="button" class="chip" data-skill="Medical">Medical</button>
+            <button type="button" class="chip" data-skill="IT Support">IT Support</button>
+            <button type="button" class="chip" data-skill="Translation">Translation</button>
+            <button type="button" class="chip plus" data-skill="Other">+ Other</button>
+          </div>
+        </section>
+
+        <section class="section">
+          <h3>AVAILABILITY</h3>
+          <div class="segmented" id="availabilityGroup">
+            <button type="button" class="segment" data-value="Weekdays">Weekdays</button>
+            <button type="button" class="segment active" data-value="Weekends">Weekends</button>
+            <button type="button" class="segment" data-value="Anytime">Anytime</button>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="row">
+            <h3>SERVICE RADIUS</h3>
+            <div class="radius-value"><span id="radiusValue">15</span> KM</div>
+          </div>
+          <input type="range" min="1" max="50" value="15"
+                 id="radiusSlider" name="radius" class="slider" />
+          <div class="slider-labels">
+            <span>1KM</span>
+            <span>25KM</span>
+            <span>50KM</span>
+          </div>
+        </section>
+
+        <section class="section">
+          <h3>BASE LOCATION</h3>
+          <!-- Ola Maps container -->
+          <div id="locationMap" class="map-card"
+               style="height:220px;border-radius:12px;overflow:hidden;"></div>
+          <div id="mapLocationTag" class="map-tag" style="margin-top:8px;">
+            📍 Drag pin or click map to set location
+          </div>
+          <button type="button" id="useMyLocationBtn"
+                  style="margin-top:10px;display:flex;align-items:center;gap:6px;
+                         padding:10px 20px;border:2px solid #4caf7d;border-radius:9999px;
+                         background:white;color:#006c44;font-weight:700;cursor:pointer;
+                         font-family:'Plus Jakarta Sans',sans-serif;">
+            ⌖ Use my location
+          </button>
+          <p class="map-note">We use your location to find nearby community needs that match your skills.</p>
+        </section>
+
+        <section class="actions">
+          <button type="submit" id="submitBtn" class="primary-btn">
+            Complete Profile
+          </button>
+          <button type="button" class="secondary-btn" id="saveLaterBtn">
+            SAVE FOR LATER
+          </button>
+        </section>
+
+      </form>
+    </main>
+
+    <footer class="footer">
+      <div class="brand">SevaSetu</div>
+      <div class="copyright">© 2024 SevaSetu. Elevated Neighborliness.</div>
+      <div class="links">
+        <a href="#">Privacy Policy</a>
+        <a href="#">Community Guidelines</a>
+      </div>
+    </footer>
+  </div>
+
+  <script src="https://www.unpkg.com/olamaps-web-sdk@latest/dist/olamaps-web-sdk.umd.js"></script>
+  <script src="{{ url_for('static', filename='js/volunteer_onboarding.js') }}"></script>
+</body>
+</html>
