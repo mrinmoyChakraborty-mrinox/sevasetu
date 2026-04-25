@@ -127,9 +127,22 @@ def run_matching_for_need(need_id: str, need: dict) -> list[str]:
     # ── 5. Write match documents ──────────────────────────────────────────────
     match_ids = _write_matches(db, need_id, need, final)
 
-    # ── 6. Log NGO activity ───────────────────────────────────────────────────
+    # ── 6. Notify Volunteers ──────────────────────────────────────────────────
+    from services import notification_service
+    for vol in final:
+        try:
+            notification_service.notify_volunteer_matched(
+                vol_id=vol["_vol_id"],
+                need_title=need.get("title", "a new need"),
+                need_id=need_id
+            )
+        except Exception as exc:
+            logger.warning(f"[Matching v2] Notification failed for vol {vol['_vol_id']}: {exc}")
+
+    # ── 7. Log NGO activity ───────────────────────────────────────────────────
     ngo_id = need.get("ngo_id")
     if ngo_id and match_ids:
+
         try:
             firebase_services.log_activity(
                 ngo_id, "matched",

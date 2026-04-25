@@ -378,11 +378,25 @@
         <span class="text-xl font-extrabold text-emerald-900 tracking-tighter">SevaSetu</span>
       </div>
       <div class="flex items-center gap-3">
-        <button class="p-2 text-on-surface-variant hover:bg-emerald-50 rounded-full transition-all">
+        <!-- Chat inbox — always visible -->
+        <a href="/inbox" id="topbar-chat-btn"
+           class="p-2 text-on-surface-variant hover:bg-emerald-50 rounded-full transition-all"
+           title="Chat inbox" style="display:none">
+          <span class="material-symbols-outlined">chat</span>
+        </a>
+        <!-- Bell — shown only when notifications not yet enabled -->
+        <button id="topbar-bell-btn"
+                class="p-2 text-on-surface-variant hover:bg-emerald-50 rounded-full transition-all"
+                style="display:none">
           <span class="material-symbols-outlined">notifications</span>
         </button>
-        <div class="h-10 w-10 rounded-full overflow-hidden border-2 border-primary-container/30">
-          <img alt="User profile avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD-bUWJTFdIVgMPbzcUZnNDAhc-jChFJZfJeAnzJ04JEVYfzfK26ZoHyeR7XupROBf4CQF4-XtFUnVaV2YyWhtDnEaPYFp4mwqamOLpfcfXtP6IMxlD3laoKqxpJbbPvrSJWIV7alfvNZYtEkjlkRd4tAgSNpEshq12f3j9RFmXdOrTp5ni21eZllfc4XofT_WFc4JMkkv1LvfrQ8cfQANRqBCZCVIjJa5r25UMTfvL3nQr_7T2vmCe95cpUCuJTixW-mYdt3hKeZJz"/>
+        <!-- Avatar — lazy-loaded -->
+        <div class="h-10 w-10 rounded-full overflow-hidden border-2 border-primary-container/30 bg-surface-container flex items-center justify-center">
+          <img id="topbar-avatar" src="" alt="Profile"
+               class="h-full w-full object-cover"/>
+          <span id="topbar-avatar-fallback"
+                style="display:none;align-items:center;justify-content:center;width:100%;height:100%;font-weight:700;color:#006c44;">
+          </span>
         </div>
         <div class="relative" id="nav-wrapper">
           <button onclick="toggleMenu()" class="p-2 text-on-surface-variant hover:bg-emerald-50 rounded-full transition-all" aria-label="Open navigation menu">
@@ -401,6 +415,7 @@
       </div>
     </div>
   </header>
+
 
   <div class="max-w-7xl mx-auto p-6 lg:p-10 space-y-10">
 
@@ -712,6 +727,8 @@ function clearFile(e) {
 </script>
 <!-- Ola Maps SDK (needed for heatmap + manual modal map) -->
 <script src="https://www.unpkg.com/olamaps-web-sdk@latest/dist/olamaps-web-sdk.umd.js"></script>
+<!-- Shared top bar behaviour (lazy avatar, bell, chat) -->
+<script src="{{ url_for('static', filename='js/topbar.js') }}"></script>
 <!-- Patched dashboard JS -->
 <script src="{{ url_for('static', filename='js/ngo_dashboard.js') }}"></script>
 </body></html>

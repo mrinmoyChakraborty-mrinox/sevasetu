@@ -70,11 +70,31 @@
     </nav>
   </div>
   <div class="flex items-center gap-3">
+    <!-- Chat inbox — always visible -->
+    <a href="/inbox" id="topbar-chat-btn"
+       class="p-2 hover:bg-surface-container-low rounded-full transition-colors"
+       title="Chat inbox" style="display:none">
+      <span class="material-symbols-outlined text-on-surface-variant">chat</span>
+    </a>
+    <!-- Bell — shown only when notifications not yet enabled -->
+    <button id="topbar-bell-btn"
+            class="p-2 hover:bg-surface-container-low rounded-full transition-colors"
+            style="display:none">
+      <span class="material-symbols-outlined text-on-surface-variant">notifications</span>
+    </button>
+    <!-- Avatar — lazy-loaded -->
+    <div class="h-9 w-9 rounded-full overflow-hidden border-2 border-primary-container/30 bg-surface-container flex items-center justify-center">
+      <img id="topbar-avatar" src="" alt="Profile" class="h-full w-full object-cover"/>
+      <span id="topbar-avatar-fallback"
+            style="display:none;align-items:center;justify-content:center;width:100%;height:100%;font-weight:700;color:#006c44;">
+      </span>
+    </div>
     <button onclick="window.location.href='/ngo/dashboard'" class="p-2 hover:bg-surface-container-low rounded-full transition-colors">
       <span class="material-symbols-outlined text-on-surface-variant">arrow_back</span>
     </button>
   </div>
 </header>
+
 
 <div class="pt-20">
 <!-- ═══════════ Main Content ═══════════ -->
@@ -299,6 +319,8 @@
 <!-- OlaMaps SDK (optional — map features degrade gracefully if blocked) -->
 <script src="https://unpkg.com/olamaps-js-sdk@0.2.1/dist/olamaps-js-sdk.umd.js"></script>
 <link href="https://unpkg.com/olamaps-js-sdk@0.2.1/dist/style.css" rel="stylesheet"/>
+<!-- Shared top bar behaviour (lazy avatar, bell, chat) -->
+<script src="{{ url_for('static', filename='js/topbar.js') }}"></script>
 <script src="{{ url_for('static', filename='js/ngo_needs_list.js') }}"></script>
 </body>
 </html>

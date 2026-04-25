@@ -49,8 +49,34 @@ def update_role(uid, role):
         "createdAt": firestore.SERVER_TIMESTAMP
     })
 
+def save_fcm_token(uid, token):
+    """Save (or update) an FCM registration token for a user using ArrayUnion."""
+    db.collection("users").document(uid).update({
+        "fcm_tokens":             firestore.ArrayUnion([token]),
+        "notifications_enabled":  True,
+        "fcm_token_updated_at":   firestore.SERVER_TIMESTAMP,
+    })
+
+def remove_fcm_token(uid, token):
+    """Remove a specific FCM token (e.g. on logout) from the user's array."""
+    db.collection("users").document(uid).update({
+        "fcm_tokens": firestore.ArrayRemove([token])
+    })
+
+def get_user_notification_state(uid):
+    """Return (notifications_enabled, fcm_tokens) for a user."""
+    doc = db.collection("users").document(uid).get()
+    if not doc.exists:
+        return False, []
+    d = doc.to_dict()
+    tokens = d.get("fcm_tokens", [])
+    # Return enabled if notifications_enabled is True AND we have tokens
+    return d.get("notifications_enabled", False), tokens
+
+
 def create_volunteer_profile(uid,data):
     db.collection("volunteers").document(uid).set({
+
         "name": data["name"],
         "availability": data["availability"],
         "location": data["location"],
@@ -214,6 +240,20 @@ def update_match_status(match_id, status):
                     "assigned_volunteer_id":   vol_id,
                     "updated_at":              firestore.SERVER_TIMESTAMP
                 })
+                # ── Notify Volunteer ──
+                try:
+                    from services import notification_service
+                    need_doc = db.collection("needs").document(need_id).get()
+                    need_title = need_doc.to_dict().get("title", "a need") if need_doc.exists else "a need"
+                    ngo_id = match.get("ngo_id")
+                    ngo_name = "An NGO"
+                    if ngo_id:
+                        ngo_data = db.collection("ngos").document(ngo_id).get().to_dict()
+                        ngo_name = ngo_data.get("org_name", "An NGO") if ngo_data else "An NGO"
+                    
+                    notification_service.notify_volunteer_assigned(vol_id, need_title, ngo_name)
+                except Exception as e:
+                    print(f"Match approval notification failed: {e}")
 
 
 # ══════════════════════════════════════════════
@@ -567,6 +607,12 @@ def volunteer_respond_to_match(match_id, vol_id, response):
                     f"{vol_name} accepted task",
                     f'For need: "{need_title}"'
                 )
+                # ── Notify NGO ──
+                try:
+                    from services import notification_service
+                    notification_service.notify_ngo_volunteer_accepted(ngo_id, vol_name, need_title)
+                except Exception as e:
+                    print(f"Volunteer acceptance notification failed: {e}")
 
     elif response == "declined":
         pass
@@ -627,3 +673,127 @@ def haversine(lat1, lon1, lat2, lon2):
          math.cos(math.radians(lat2)) *
          math.sin(dlon / 2) ** 2)
     return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+# ══════════════════════════════════════════════
+# CHAT / MESSAGING
+# ══════════════════════════════════════════════
+
+def get_or_create_conversation(participant_ids, need_id=None):
+    """
+    Finds an existing conversation between exactly these participants, 
+    or creates a new one.
+    """
+    participant_ids = sorted(participant_ids)
+    
+    # Try to find existing
+    query = (
+        db.collection("conversations")
+          .where("participants", "==", participant_ids)
+    )
+    if need_id:
+        query = query.where("need_id", "==", need_id)
+    
+    docs = query.limit(1).stream()
+    for doc in docs:
+        return doc.id
+    
+    # Create new
+    _, ref = db.collection("conversations").add({
+        "participants":  participant_ids,
+        "need_id":       need_id,
+        "last_message":  "",
+        "updated_at":    firestore.SERVER_TIMESTAMP,
+        "created_at":    firestore.SERVER_TIMESTAMP,
+    })
+    return ref.id
+
+def send_chat_message(conversation_id, sender_id, text):
+    """
+    Saves a message and notifies other participants via FCM.
+    """
+    # 1. Save Message
+    msg_ref = (
+        db.collection("conversations")
+          .document(conversation_id)
+          .collection("messages")
+          .add({
+              "sender_id":  sender_id,
+              "text":       text,
+              "created_at": firestore.SERVER_TIMESTAMP,
+              "read_by":    [sender_id]
+          })
+    )
+    
+    # 2. Update conversation summary
+    db.collection("conversations").document(conversation_id).update({
+        "last_message": text,
+        "updated_at":   firestore.SERVER_TIMESTAMP
+    })
+    
+    # 3. Trigger FCM Notifications
+    try:
+        conv_doc = db.collection("conversations").document(conversation_id).get()
+        if conv_doc.exists:
+            participants = conv_doc.to_dict().get("participants", [])
+            sender_doc   = db.collection("users").document(sender_id).get()
+            sender_name  = sender_doc.to_dict().get("name", "Someone") if sender_doc.exists else "Someone"
+            
+            from services import notification_service
+            for pid in participants:
+                if pid != sender_id:
+                    notification_service.notify_new_message(sender_name, pid, text, conversation_id)
+    except Exception as e:
+        print(f"Chat notification failed: {e}")
+    
+    return msg_ref[1].id
+
+def get_conversations_for_user(uid):
+    """Fetch all conversations where the user is a participant."""
+    docs = (
+        db.collection("conversations")
+          .where("participants", "array_contains", uid)
+          .order_by("updated_at", direction=firestore.Query.DESCENDING)
+          .stream()
+    )
+    result = []
+    for doc in docs:
+        d = doc.to_dict()
+        d["id"] = doc.id
+        
+        # Identify the other person
+        other_id = next((p for p in d.get("participants", []) if p != uid), None)
+        if other_id:
+            # Try to get their details
+            other_user = db.collection("users").document(other_id).get()
+            if other_user.exists:
+                udata = other_user.to_dict()
+                d["other_name"] = udata.get("name", "User")
+                d["other_photo"] = udata.get("photo_url", "")
+            else:
+                d["other_name"] = "Deleted User"
+                d["other_photo"] = ""
+        
+        result.append(d)
+    return result
+
+def get_messages_for_conversation(conversation_id, limit=50):
+    """Fetch message history for a conversation."""
+    docs = (
+        db.collection("conversations")
+          .document(conversation_id)
+          .collection("messages")
+          .order_by("created_at", direction=firestore.Query.ASCENDING)
+          .limit(limit)
+          .stream()
+    )
+    messages = []
+    for doc in docs:
+        d = doc.to_dict()
+        d["id"] = doc.id
+        # Convert timestamp to ISO string for JSON
+        ts = d.get("created_at")
+        if ts and hasattr(ts, "isoformat"):
+            d["created_at"] = ts.isoformat()
+        messages.append(d)
+    return messages
+

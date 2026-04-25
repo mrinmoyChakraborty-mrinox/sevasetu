@@ -12,6 +12,9 @@ from services import imagekit_services,firebase_services,gemini_service,matching
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "super-secret-key-change-in-prod")
+
+from flask_socketio import SocketIO, join_room, leave_room, emit
+socketio = SocketIO(app, cors_allowed_origins="*", manage_session=True)
 logger = logging.getLogger(__name__)
 # ======================
 # Firebase Init
@@ -1125,6 +1128,45 @@ def get_ola_maps_key():
     return jsonify({
         "OLA_MAPS_API_KEY": os.environ.get("OLA_MAPS_API_KEY")
     })
+
+# ══════════════════════════════════════════════
+# API — TOPBAR LAZY DATA  (avatar + notification state)
+# ══════════════════════════════════════════════
+
+@app.route("/api/user/topbar")
+def api_user_topbar():
+    if not session.get("user"):
+        return jsonify({"error": "Unauthorized"}), 401
+    uid = session["user"]["uid"]
+    notif_enabled, fcm_tokens = firebase_services.get_user_notification_state(uid)
+    return jsonify({
+        "photo_url":             session["user"].get("photo_url", ""),
+        "name":                  session["user"].get("name", ""),
+        "notifications_enabled": notif_enabled and len(fcm_tokens) > 0,
+    })
+
+# ══════════════════════════════════════════════
+# API — SAVE/REMOVE FCM TOKEN
+# ══════════════════════════════════════════════
+
+@app.route("/api/user/fcm-token", methods=["POST", "DELETE"])
+def api_fcm_token_manage():
+    if not session.get("user"):
+        return jsonify({"error": "Unauthorized"}), 401
+    uid   = session["user"]["uid"]
+    token = (request.get_json() or {}).get("token", "").strip()
+    if not token:
+        return jsonify({"error": "No token provided"}), 400
+    
+    if request.method == "POST":
+        firebase_services.save_fcm_token(uid, token)
+    else: # DELETE
+        firebase_services.remove_fcm_token(uid, token)
+        
+    return jsonify({"success": True})
+
+
+
 # ======================
 # Auth Check
 # ======================
@@ -1134,6 +1176,98 @@ def check_auth():
     if session.get("user"):
         return jsonify({"authenticated": True, "user": session["user"]})
     return jsonify({"authenticated": False}), 401
+# ══════════════════════════════════════════════
+# SOCKET.IO EVENTS
+# ══════════════════════════════════════════════
+
+@socketio.on('join')
+def on_join(data):
+    room = data.get('conversation_id')
+    if room:
+        join_room(room)
+        logger.info(f"Socket: User joined room {room}")
+
+@socketio.on('leave')
+def on_leave(data):
+    room = data.get('conversation_id')
+    if room:
+        leave_room(room)
+
+@socketio.on('send_message')
+def handle_send_message(data):
+    conv_id = data.get('conversation_id')
+    text    = data.get('text', '').strip()
+    sender_id = data.get('sender_id') # In production, verify from session
+    
+    if not conv_id or not text or not sender_id:
+        return
+        
+    # 1. Persist to Firestore & Notify via FCM
+    msg_id = firebase_services.send_chat_message(conv_id, sender_id, text)
+    
+    # 2. Broadcast to room (Real-time update)
+    emit('receive_message', {
+        'id': msg_id,
+        'text': text,
+        'sender_id': sender_id,
+        'created_at': datetime.now(timezone.utc).isoformat()
+    }, room=conv_id)
+
+@socketio.on('typing')
+def handle_typing(data):
+    conv_id = data.get('conversation_id')
+    is_typing = data.get('is_typing')
+    user_id = data.get('user_id')
+    emit('display_typing', {'user_id': user_id, 'is_typing': is_typing}, room=conv_id, include_self=False)
+
+@app.route("/inbox")
+def inbox_page():
+    if not session.get("user"):
+        return redirect("/getstarted")
+    return render_template("inbox.html", user=session["user"])
+
+@app.route("/api/chat/conversations")
+def api_chat_conversations():
+    if not session.get("user"):
+        return jsonify({"error": "Unauthorized"}), 401
+    uid = session["user"]["uid"]
+    conversations = firebase_services.get_conversations_for_user(uid)
+    return jsonify({"conversations": conversations})
+
+@app.route("/api/chat/messages/<conv_id>")
+def api_chat_messages(conv_id):
+    if not session.get("user"):
+        return jsonify({"error": "Unauthorized"}), 401
+    # Check if user is participant
+    uid = session["user"]["uid"]
+    conv = firebase_services.db.collection("conversations").document(conv_id).get()
+    if not conv.exists or uid not in conv.to_dict().get("participants", []):
+        return jsonify({"error": "Forbidden"}), 403
+    
+    messages = firebase_services.get_messages_for_conversation(conv_id)
+    return jsonify({"messages": messages})
+
+@app.route("/api/chat/send", methods=["POST"])
+def api_chat_send():
+    if not session.get("user"):
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    uid  = session["user"]["uid"]
+    data = request.get_json() or {}
+    conv_id = data.get("conversation_id")
+    text    = data.get("text", "").strip()
+    
+    if not conv_id or not text:
+        return jsonify({"error": "Invalid data"}), 400
+        
+    # Check participation
+    conv_doc = firebase_services.db.collection("conversations").document(conv_id).get()
+    if not conv_doc.exists or uid not in conv_doc.to_dict().get("participants", []):
+        return jsonify({"error": "Forbidden"}), 403
+        
+    msg_id = firebase_services.send_chat_message(conv_id, uid, text)
+    return jsonify({"success": True, "message_id": msg_id})
+
 
 
 # ======================
@@ -1151,4 +1285,4 @@ def logout():
 # ======================
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    socketio.run(app, debug=True)

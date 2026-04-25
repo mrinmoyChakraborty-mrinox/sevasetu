@@ -264,13 +264,24 @@
     <!-- Page title (desktop only) -->
     <span style="font-size:1rem;font-weight:700;color:#064e35;display:none;" class="md-only-title">Volunteer Dashboard</span>
 
-    <!-- Right: notification + avatar + hamburger -->
+    <!-- Right: chat + notification + avatar + hamburger -->
     <div class="header-right">
-      <button class="icon-btn" aria-label="Notifications">
+      <!-- Chat inbox — always visible -->
+      <a href="/inbox" id="topbar-chat-btn"
+         class="icon-btn" aria-label="Chat inbox"
+         title="Chat inbox" style="display:none">
+        <span class="material-symbols-outlined">chat</span>
+      </a>
+      <!-- Bell — shown only when notifications not yet enabled -->
+      <button id="topbar-bell-btn" class="icon-btn" aria-label="Notifications" style="display:none">
         <span class="material-symbols-outlined">notifications</span>
       </button>
-      <div class="avatar-btn">
-        <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuDEP3W3O20ubzU7H6bAIWmEGUaVbqW64eRKe1LqttzyrFTMHnnbWW3xfmrm81TW3Wkg4Sh7GoWBHNLp4bSYDEFLONKYmO7zTm8l2rL4FfmYeWSOQjRTMie3417fcS5NNtlioh6vBGkLaLN_LdjwZuu5GTogPobYiU7HEW-Ycd32gu8TL-ZXGKipbhKzgCmjsXSp4CV2Z850nc7KQs67iarO8czKtm8G779DjJN5W9Oz7YkSo4xBN5zexc5yDWP7VZMVXtfdaY9dkdI4" alt="Profile"/>
+      <!-- Avatar — lazy-loaded -->
+      <div class="avatar-btn" style="overflow:hidden;display:flex;align-items:center;justify-content:center;background:#e6eeff;">
+        <img id="topbar-avatar" src="" alt="Profile" style="width:100%;height:100%;object-fit:cover;"/>
+        <span id="topbar-avatar-fallback"
+              style="display:none;align-items:center;justify-content:center;width:100%;height:100%;font-weight:700;color:#006c44;font-size:1rem;">
+        </span>
       </div>
       <!-- Hamburger + dropdown -->
       <div class="menu-wrap">
@@ -291,6 +302,7 @@
 
   </div>
 </header>
+
 
 
 <!-- ══════════════════════════════════════════════════════════
@@ -465,6 +477,8 @@
 <!-- JavaScript — loaded last so all DOM elements exist -->
 <!-- Ola Maps SDK -->
 <script src="https://www.unpkg.com/olamaps-web-sdk@latest/dist/olamaps-web-sdk.umd.js"> </script>
+<!-- Shared top bar behaviour (lazy avatar, bell, chat) -->
+<script src="{{ url_for('static', filename='js/topbar.js') }}"></script>
 <!-- Volunteer Dashboard JS -->
 <script src="{{ url_for('static', filename='js/volunteer_dashboard.js') }}"> </script>
 
