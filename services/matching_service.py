@@ -54,8 +54,9 @@ import json
 import os
 import re
 import logging
-from firebase_admin import firestore
 from services import firebase_services
+from firebase_admin import firestore
+
 
 logger = logging.getLogger(__name__)
 
@@ -63,12 +64,13 @@ logger = logging.getLogger(__name__)
 MAX_MATCHES_PER_NEED  = 5    # final match docs to write to Firestore
 PRE_SORT_POOL_SIZE    = 25   # max candidates forwarded to Gemini
 DEFAULT_RADIUS_KM     = 30   # fallback if volunteer has no radius set
-GEMINI_MODEL          = "gemini-2.5-flash"
+GEMINI_MODEL          = "gemini-2.5-flash"   # cheaper, faster, and better at structured output than 2.5 for our use case
 
 
 # ═════════════════════════════════════════════════════════════════════════════
 # PUBLIC ENTRY POINT
-# ═════════════════════════════════════════════════════════════════════════════
+# ════════════════════╗
+
 
 def run_matching_for_need(need_id: str, need: dict) -> list[str]:
     """
@@ -88,7 +90,7 @@ def run_matching_for_need(need_id: str, need: dict) -> list[str]:
     logger.info(f"[Matching v2] Starting — need={need_id!r} title={need.get('title')!r}")
 
     # ── 1. Load online volunteers ─────────────────────────────────────────────
-    volunteers = _get_all_volunteers(db)
+    volunteers = _get_online_volunteers(db)
     if not volunteers:
         logger.info("[Matching v2] No online volunteers found.")
         return []
@@ -129,7 +131,6 @@ def run_matching_for_need(need_id: str, need: dict) -> list[str]:
     ngo_id = need.get("ngo_id")
     if ngo_id and match_ids:
         try:
-            from services import firebase_services
             firebase_services.log_activity(
                 ngo_id, "matched",
                 f"{len(match_ids)} volunteer{'s' if len(match_ids) != 1 else ''} matched by AI",
@@ -224,14 +225,21 @@ def _gemini_score_all(candidates: list[dict], need: dict, api_key: str) -> list[
     Sends all candidates to Gemini in ONE call.
     Gemini evaluates every volunteer holistically and returns a score,
     reason, confidence, strengths, and concerns for each.
+
+    Uses google.genai (new SDK) to match gemini_service.py.
+    Thinking is OFF (budget=0) — matching data is already structured,
+    no ambiguous inference needed here (that's gemini_service's job).
     """
-    import google.generativeai as genai
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel(GEMINI_MODEL)
-    generation_config = genai.types.GenerationConfig(
-    response_mime_type = "application/json",
-    thinking_config    = {"thinking_budget": 0}  # off — data is already structured
+    from google import genai
+    from google.genai import types
+
+    client = genai.Client(api_key=api_key)
+
+    generation_config = types.GenerateContentConfig(
+        response_mime_type = "application/json",
+        thinking_config    = types.ThinkingConfig(thinking_budget=0),
     )
+
     # Build compact need context
     need_ctx = {
         "title":            need.get("title", ""),
@@ -248,22 +256,23 @@ def _gemini_score_all(candidates: list[dict], need: dict, api_key: str) -> list[
     vol_profiles = []
     for i, vol in enumerate(candidates):
         vol_profiles.append({
-            "index":        i,
-            "skills":       vol.get("skills", []),
-            "about":        (vol.get("about") or "")[:300],
-            "availability": vol.get("availability", ""),
-            "distance_km":  vol.get("_dist_km"),
-            "rating":       round(float(vol.get("rating", 0)), 1),
-            "tasks_done":   int(vol.get("totalTasks", 0)),
-            "verified":     bool(vol.get("verified", False)),
+            "index":            i,
+            "skills":           vol.get("skills", []),
+            "about":            (vol.get("about") or "")[:300],
+            "availability":     vol.get("availability", ""),
+            "distance_km":      vol.get("_dist_km"),
+            "rating":           round(float(vol.get("rating", 0)), 1),
+            "tasks_done":       int(vol.get("totalTasks", 0)),
+            "verified":         bool(vol.get("verified", False)),
             "currently_online": vol.get("_is_online", False),
         })
 
     prompt = _build_prompt(need_ctx, vol_profiles)
 
-    response = model.generate_content(
-        prompt,
-        generation_config={"response_mime_type": "application/json"}
+    response = client.models.generate_content(
+        model    = GEMINI_MODEL,
+        contents = [prompt],
+        #config   = generation_config,
     )
 
     results = _parse_response(response.text.strip(), len(candidates))
@@ -344,12 +353,6 @@ Evaluate holistically. Do NOT mechanically add sub-scores. Consider:
 5. AVAILABILITY FIT
    "Anytime" > "Weekends" for urgent needs.
    "Weekdays" is fine for planned/educational tasks.
-
-6. ONLINE STATUS
-   currently_online=true means immediate availability.
-   For urgency_score >= 8, strongly prefer online volunteers.
-   Offline volunteers can still score highly if their profile is exceptional —
-   they will be notified when they come back online.
 
 Confidence levels:
   HIGH   — strong alignment on skills + availability + proximity
@@ -491,8 +494,7 @@ def _write_matches(db, need_id: str, need: dict, volunteers: list[dict]) -> list
             "match_reason":     vol["_ai_reason"],         # one sentence for the NGO
             "match_strengths":  vol["_ai_strengths"],      # bullet points
             "match_concerns":   vol["_ai_concerns"],       # bullet points
-            "volunteer_was_online": vol.get("_is_online", False),
-            "notify_immediately":   vol.get("_is_online", False),
+
             # Logistics
             "distance_km": vol.get("_dist_km"),
 
@@ -509,17 +511,15 @@ def _write_matches(db, need_id: str, need: dict, volunteers: list[dict]) -> list
 # UTILITIES
 # ═════════════════════════════════════════════════════════════════════════════
 
-# RENAME this function and change the query
-def _get_all_volunteers(db) -> list[dict]:
-    """Fetch ALL volunteers regardless of online status."""
-    docs = db.collection("volunteers").stream()   
+def _get_online_volunteers(db) -> list[dict]:
+    docs = db.collection("volunteers").where("online", "==", True).stream()
     result = []
     for doc in docs:
         d = doc.to_dict()
-        d["_vol_id"]     = doc.id
-        d["_is_online"]  = bool(d.get("online", False))  
+        d["_vol_id"] = doc.id
         result.append(d)
     return result
+
 
 def _location_str(loc) -> str:
     if not loc:

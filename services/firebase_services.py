@@ -119,6 +119,7 @@ def create_need(need_data):
 def get_need_by_need_id(need_id):
     need_doc = db.collection("needs").document(need_id).get()
     return need_doc
+
 def get_need_by_id(need_id):
     doc = db.collection("needs").document(need_id).get()
     if not doc.exists:
@@ -183,9 +184,7 @@ def get_suggested_matches_for_ngo(ngo_id, limit=5):
             d["skills"]          = []
             d["distance"]        = "Nearby"
  
-        # ── NEW: AI reasoning fields ──────────────────────────────
-        # These were added by matching_service v2.
-        # Older match docs won't have them — default gracefully.
+        # ── AI reasoning fields ──────────────────────────────
         d.setdefault("match_confidence", "MEDIUM")
         d.setdefault("match_reason",     "")
         d.setdefault("match_strengths",  [])
@@ -276,29 +275,57 @@ def save_report(ngo_id, image_url, file_id):
 
 
 def save_extracted_needs_draft(ngo_id, report_id, needs):
-    """Save AI-extracted needs as drafts pending NGO review."""
+    """
+    Save AI-extracted needs as drafts pending NGO review.
+
+    Location strings extracted by Gemini (e.g. "vidyasagapur durga mandir,
+    kharagpur") are forward-geocoded via OlaMaps so they are stored as
+    structured objects  { city, lat, lng }  — exactly the same format used
+    when an NGO pins a location manually on the map.
+
+    If geocoding fails (API error, no results, key missing) the raw text is
+    preserved as the `city` field and lat/lng are set to None, so the need
+    still saves and the NGO can edit the location on the review screen.
+    """
+    from services.geocoding_service import geocode_location_safe   # lazy import
+
     batch = db.batch()
     for need in needs:
+        raw_location = need.get("location", "")
+
+        # ── Geocode the plain-text location ──────────────────────────
+        if raw_location and isinstance(raw_location, str) and raw_location.strip():
+            # Forward-geocode: "vidyasagapur durga mandir, kharagpur"
+            #                → { city: "Kharagpur", lat: 22.368, lng: 87.249 }
+            structured_location = geocode_location_safe(raw_location)
+        elif isinstance(raw_location, dict):
+            # Gemini returned a dict already (shouldn't happen, but be safe)
+            structured_location = raw_location
+        else:
+            structured_location = {"city": "", "lat": None, "lng": None}
+
         ref = db.collection("needs").document()
         batch.set(ref, {
-            "ngo_id":           ngo_id,
-            "report_id":        report_id,
-            "title":            need.get("title", ""),
-            "description":      need.get("description", ""),
-            "category":         need.get("category", "OTHER"),
-            "urgency_score":    need.get("urgency_score", 5),
-            "urgency_label":    need.get("urgency_label", "MEDIUM"),
-            "urgency_inferred": need.get("urgency_inferred", True),
-            "urgency_reason":   need.get("urgency_reason", ""),
-            "required_skills":  need.get("required_skills", []),
-            "location":         need.get("location", ""),
-            "beneficiaries":    need.get("beneficiaries", ""),
+            "ngo_id":              ngo_id,
+            "report_id":           report_id,
+            "title":               need.get("title", ""),
+            "description":         need.get("description", ""),
+            "category":            need.get("category", "OTHER"),
+            "urgency_score":       need.get("urgency_score", 5),
+            "urgency_label":       need.get("urgency_label", "MEDIUM"),
+            "urgency_inferred":    need.get("urgency_inferred", True),
+            "urgency_reason":      need.get("urgency_reason", ""),
+            "required_skills":     need.get("required_skills", []),
+            "location":            structured_location,   # ← { city, lat, lng }
+            "beneficiaries":       need.get("beneficiaries", ""),
             "deadline_suggestion": need.get("deadline_suggestion", "planned"),
-            "status":           "draft",   # pending NGO confirmation
-            "source":           "ai_extracted",
-            "created_at":       firestore.SERVER_TIMESTAMP
+            "estimated_people":    need.get("estimated_people"),
+            "status":              "draft",               # pending NGO confirmation
+            "source":              "ai_extracted",
+            "created_at":          firestore.SERVER_TIMESTAMP,
         })
     batch.commit()
+
 
 def get_reports_by_uid(uid):
     docs = (
@@ -309,6 +336,7 @@ def get_reports_by_uid(uid):
           .stream()
     )
     return docs
+
 def get_report_by_report_id(report_id):
     doc = db.collection("reports").document(report_id).get()
     return doc
@@ -322,6 +350,7 @@ def get_draft_needs_for_report(report_id):
           .stream()
     )
     return needs_docs
+
 def get_needs_for_report(report_id):
     needs_docs = (
         db.collection("needs")
@@ -352,8 +381,9 @@ def update_report_status(report_id,update):
 
 
 def update_need(need_id,update):
-    
-    db.collection("needs").document(need_id).update(update)  
+    db.collection("needs").document(need_id).update(update)
+
+
 # ══════════════════════════════════════════════
 # VOLUNTEER PROFILE
 # ══════════════════════════════════════════════
@@ -369,23 +399,21 @@ def update_volunteer_online(uid, online):
         "updated_at": firestore.SERVER_TIMESTAMP
     })
 
-    # NEW — when a volunteer comes online, notify them of queued matches
+    # When a volunteer comes online, notify them of queued matches
     if online:
         _notify_queued_matches(db, uid)
 
 
-# NEW function to add below update_volunteer_online
 def _notify_queued_matches(db, vol_id: str):
     """
     When a volunteer comes online, find any suggested matches that were
     created while they were offline and flip notify_immediately = True.
-    Your notification/FCM system watches for this flag.
     """
     pending = (
         db.collection("matches")
           .where("volunteer_id",    "==", vol_id)
           .where("status",          "==", "suggested")
-          .where("notify_immediately", "==", False)    # was offline when matched
+          .where("notify_immediately", "==", False)
           .stream()
     )
     batch = db.batch()
@@ -402,10 +430,6 @@ def _notify_queued_matches(db, vol_id: str):
 # ══════════════════════════════════════════════
 
 def get_matches_for_volunteer(vol_id, limit=20):
-    """
-    Get all matches where this volunteer is the target.
-    Returns list of match dicts with id included.
-    """
     docs = (
         db.collection("matches")
           .where("volunteer_id", "==", vol_id)
@@ -423,14 +447,12 @@ def get_matches_for_volunteer(vol_id, limit=20):
 
 def enrich_tasks_with_needs(matches, vol_uid):
     """
-    Given a list of match dicts, fetch the corresponding
-    need document and merge fields useful for the dashboard.
-    Also computes distance from volunteer's location.
+    Given a list of match dicts, fetch the corresponding need document
+    and merge fields useful for the dashboard.
     """
     if not matches:
         return []
 
-    # Get volunteer location once
     vol_doc = db.collection("volunteers").document(vol_uid).get()
     vol     = vol_doc.to_dict() if vol_doc.exists else {}
     vol_loc = vol.get("location", {})
@@ -450,21 +472,21 @@ def enrich_tasks_with_needs(matches, vol_uid):
         need = need_doc.to_dict()
         need["id"] = need_doc.id
 
-        # Fetch NGO name
         ngo_id  = need.get("ngo_id", "")
         ngo_doc = db.collection("ngos").document(ngo_id).get()
         ngo_name = ngo_doc.to_dict().get("org_name", "NGO") if ngo_doc.exists else "NGO"
 
-        # Distance
         distance_km = None
         need_loc = need.get("location", {})
+        # location is now always a dict; handle legacy string gracefully
+        if isinstance(need_loc, str):
+            need_loc = {"city": need_loc, "lat": None, "lng": None}
         if vol_lat and vol_lng and need_loc.get("lat") and need_loc.get("lng"):
             distance_km = round(
                 haversine(vol_lat, vol_lng, need_loc["lat"], need_loc["lng"]),
                 1
             )
 
-        # Deadline text
         deadline = need.get("deadline")
         deadline_text = ""
         if deadline:
@@ -483,13 +505,12 @@ def enrich_tasks_with_needs(matches, vol_uid):
             except Exception:
                 pass
 
-        # Progress based on status
         status   = match.get("status", need.get("status", "open"))
         progress = {"suggested": 10, "accepted": 30, "in_progress": 60,
                     "completed": 100}.get(status, 10)
 
         enriched.append({
-            "id":             match["id"],       # match doc id used for accept/decline
+            "id":             match["id"],
             "need_id":        need_id,
             "title":          need.get("title", ""),
             "description":    need.get("description", ""),
@@ -517,16 +538,13 @@ def enrich_tasks_with_needs(matches, vol_uid):
 # ══════════════════════════════════════════════
 
 def volunteer_respond_to_match(match_id, vol_id, response):
-    """
-    response: "accepted" | "declined"
-    """
+    """response: "accepted" | "declined" """
     db.collection("matches").document(match_id).update({
         "status":       response,
         "responded_at": firestore.SERVER_TIMESTAMP
     })
 
     if response == "accepted":
-        # Update the need status to "assigned"
         match_doc = db.collection("matches").document(match_id).get()
         if match_doc.exists:
             match = match_doc.to_dict()
@@ -538,7 +556,6 @@ def volunteer_respond_to_match(match_id, vol_id, response):
                     "assigned_volunteer_id":  vol_id,
                     "updated_at":             firestore.SERVER_TIMESTAMP
                 })
-            # Log activity for NGO
             if ngo_id:
                 need_doc = db.collection("needs").document(need_id).get()
                 need_title = need_doc.to_dict().get("title", "a need") if need_doc.exists else "a need"
@@ -552,8 +569,6 @@ def volunteer_respond_to_match(match_id, vol_id, response):
                 )
 
     elif response == "declined":
-        # Mark this specific match as declined
-        # The matching engine can suggest the next volunteer
         pass
 
 
@@ -568,7 +583,6 @@ def volunteer_complete_task(match_id, vol_id, proof_url=None):
 
     db.collection("matches").document(match_id).update(update_data)
 
-    # Update the need status
     match_doc = db.collection("matches").document(match_id).get()
     if match_doc.exists:
         match   = match_doc.to_dict()
@@ -581,13 +595,11 @@ def volunteer_complete_task(match_id, vol_id, proof_url=None):
                 "updated_at": firestore.SERVER_TIMESTAMP
             })
 
-        # Increment volunteer's task count
         db.collection("volunteers").document(vol_id).update({
             "totalTasks": firestore.Increment(1),
             "updated_at": firestore.SERVER_TIMESTAMP
         })
 
-        # Log activity for NGO
         if ngo_id:
             need_doc   = db.collection("needs").document(need_id).get()
             need_title = need_doc.to_dict().get("title", "a need") if need_doc.exists else "a need"
@@ -602,7 +614,7 @@ def volunteer_complete_task(match_id, vol_id, proof_url=None):
 
 
 # ══════════════════════════════════════════════
-# HAVERSINE (already in file — add if missing)
+# HAVERSINE
 # ══════════════════════════════════════════════
 
 def haversine(lat1, lon1, lat2, lon2):
@@ -614,4 +626,4 @@ def haversine(lat1, lon1, lat2, lon2):
          math.cos(math.radians(lat1)) *
          math.cos(math.radians(lat2)) *
          math.sin(dlon / 2) ** 2)
-    return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))    
+    return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))

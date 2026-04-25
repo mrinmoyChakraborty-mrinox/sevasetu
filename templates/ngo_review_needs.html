@@ -70,8 +70,18 @@ tailwind.config = { theme: { extend: {
     outline:none; transition:box-shadow 0.2s; }
   .form-field:focus { box-shadow:0 0 0 2px rgba(0,108,68,0.2); }
 
+  /* Location geocode status indicator */
+  .loc-status { font-size:.7rem; font-weight:600; margin-top:4px;
+    display:flex; align-items:center; gap:4px; transition:all .2s; }
+  .loc-status.geocoding { color:#855300; }
+  .loc-status.geocoded  { color:#006c44; }
+  .loc-status.failed    { color:#a83639; }
+  .loc-status.empty     { color:#6e7a71; }
+
   @keyframes skelPulse { 0%,100%{opacity:1} 50%{opacity:.4} }
   .skel { background:#e2e8f0; border-radius:6px; animation:skelPulse 1.4s ease infinite; }
+  @keyframes spin { to{transform:rotate(360deg)} }
+  .spin { animation:spin 1s linear infinite; display:inline-block; }
 </style>
 </head>
 <body class="text-on-surface min-h-screen">
@@ -108,13 +118,12 @@ tailwind.config = { theme: { extend: {
 
   <!-- Needs List -->
   <div id="needsList" class="flex flex-col gap-8">
-    <!-- skeleton -->
-    <div class="need-card bg-surface-container-lowest rounded-xl p-8 shadow-[0_20px_40px_rgba(0,108,68,0.06)] relative overflow-hidden" style="pointer-events:none">
+    <div class="need-card bg-surface-container-lowest rounded-xl p-8 shadow-[0_20px_40px_rgba(0,108,68,0.06)]" style="pointer-events:none">
       <div class="skel h-6 w-1/2 mb-4"></div>
       <div class="skel h-4 w-full mb-2"></div>
       <div class="skel h-4 w-3/4"></div>
     </div>
-    <div class="need-card bg-surface-container-lowest rounded-xl p-8 shadow-[0_20px_40px_rgba(0,108,68,0.06)] relative overflow-hidden" style="pointer-events:none">
+    <div class="need-card bg-surface-container-lowest rounded-xl p-8 shadow-[0_20px_40px_rgba(0,108,68,0.06)]" style="pointer-events:none">
       <div class="skel h-6 w-1/2 mb-4"></div>
       <div class="skel h-4 w-full mb-2"></div>
       <div class="skel h-4 w-3/4"></div>
@@ -145,18 +154,63 @@ tailwind.config = { theme: { extend: {
 
 <script>
 const reportId = window.location.pathname.split('/').pop();
-let needsData  = []; // [{id, included, ...fields}]
+let needsData  = [];
+let OLA_MAPS_API_KEY = null;
 
 const CATEGORIES = ['Healthcare','Education','Logistics','Food & Nutrition','Shelter','Mental Health','Water & Sanitation','Environment','Other'];
 
-// ── Urgency badge color ──────────────────────────────────────
+// ── Load OlaMaps key ────────────────────────────────────────
+async function loadOlaMapsKey() {
+  try {
+    const res  = await fetch('/api/get_ola_maps_key');
+    const data = await res.json();
+    OLA_MAPS_API_KEY = data.OLA_MAPS_API_KEY;
+  } catch {}
+}
+
+// ── Forward-geocode a location string via OlaMaps ───────────
+// Returns { city, lat, lng } or null
+async function geocodeText(text) {
+  if (!OLA_MAPS_API_KEY || !text.trim()) return null;
+  try {
+    const res  = await fetch(
+      `https://api.olamaps.io/places/v1/textsearch?input=${encodeURIComponent(text)}&api_key=${OLA_MAPS_API_KEY}`
+    );
+    const data = await res.json();
+    const results = data.results || [];
+    if (!results.length) return null;
+
+    const first = results[0];
+    const geo   = first.geometry?.location || {};
+    if (!geo.lat || !geo.lng) return null;
+
+    // Extract city name
+    const components = first.address_components || [];
+    let city = '';
+    for (const c of components) {
+      if ((c.types||[]).includes('locality')) { city = c.long_name; break; }
+    }
+    if (!city) {
+      for (const c of components) {
+        if ((c.types||[]).includes('administrative_area_level_2')) { city = c.long_name; break; }
+      }
+    }
+    if (!city) city = (first.formatted_address || text).split(',')[0].trim();
+
+    return { city, lat: geo.lat, lng: geo.lng };
+  } catch {
+    return null;
+  }
+}
+
+// ── Urgency badge color ─────────────────────────────────────
 function urgencyBadgeClass(score) {
   if (score >= 8) return 'bg-tertiary-fixed text-on-tertiary-fixed';
   if (score >= 5) return 'bg-secondary-fixed text-on-secondary-container';
   return 'bg-primary-fixed text-on-primary-fixed';
 }
 
-// ── Build a need card ────────────────────────────────────────
+// ── Build a need card ───────────────────────────────────────
 function buildCard(need, idx) {
   const accentColors = [
     'bg-primary-container','bg-secondary-container','bg-tertiary-container',
@@ -175,6 +229,13 @@ function buildCard(need, idx) {
   const catOptions = CATEGORIES.map(c =>
     `<option ${c===need.category?'selected':''}>${c}</option>`
   ).join('');
+
+  // ── Location display ─────────────────────────────────────
+  // need.location is always a { city, lat, lng } dict from geocoding_service
+  // Show city text in the input; lat/lng stored in hidden fields
+  const locObj   = (typeof need.location === 'object' && need.location) ? need.location : { city: need.location || '', lat: null, lng: null };
+  const cityText = locObj.city || '';
+  const hasCoords = locObj.lat && locObj.lng;
 
   return `
   <article class="need-card bg-surface-container-lowest rounded-xl p-8 shadow-[0_20px_40px_rgba(0,108,68,0.06)] relative overflow-hidden ${need.included?'':'excluded'}"
@@ -216,14 +277,30 @@ function buildCard(need, idx) {
             <select class="form-field w-full cursor-pointer"
                     onchange="updateField('${need.id}','category',this.value)">${catOptions}</select>
           </div>
+
+          <!-- ── Location field with geocoding feedback ── -->
           <div>
             <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-2">Location</label>
             <div class="relative">
               <span class="material-symbols-outlined absolute left-3 top-3 text-on-surface-variant text-sm pointer-events-none">location_on</span>
-              <input type="text" class="form-field w-full pl-9"
-                     value="${escHtml(typeof need.location==='object'?(need.location.city||''):need.location||'')}"
+              <input type="text"
+                     id="loc-input-${need.id}"
+                     class="form-field w-full pl-9"
+                     value="${escHtml(cityText)}"
                      placeholder="e.g. Zone 4, Mumbai"
-                     onchange="updateField('${need.id}','location',this.value)"/>
+                     onchange="handleLocationChange('${need.id}', this.value)"/>
+            </div>
+            <!-- Hidden lat/lng — updated by geocoder -->
+            <input type="hidden" id="loc-lat-${need.id}" value="${locObj.lat || ''}"/>
+            <input type="hidden" id="loc-lng-${need.id}" value="${locObj.lng || ''}"/>
+            <!-- Geocode status indicator -->
+            <div id="loc-status-${need.id}" class="loc-status ${hasCoords ? 'geocoded' : 'empty'}">
+              ${hasCoords
+                ? `<span class="material-symbols-outlined" style="font-size:12px;font-variation-settings:'FILL' 1">check_circle</span> Coordinates resolved (${Number(locObj.lat).toFixed(4)}, ${Number(locObj.lng).toFixed(4)})`
+                : cityText
+                  ? `<span class="material-symbols-outlined" style="font-size:12px">info</span> No coordinates — will geocode on publish`
+                  : `<span class="material-symbols-outlined" style="font-size:12px">location_off</span> No location set`
+              }
             </div>
           </div>
         </div>
@@ -280,7 +357,60 @@ function buildCard(need, idx) {
   </article>`;
 }
 
-// ── Toggle include ───────────────────────────────────────────
+// ── Handle location field change ────────────────────────────
+// Debounced — geocodes 800ms after the user stops typing
+const _geocodeTimers = {};
+
+async function handleLocationChange(id, text) {
+  const need = needsData.find(n => n.id === id);
+  if (!need) return;
+
+  // Update the in-memory location city immediately
+  // lat/lng will be updated after geocoding completes
+  if (typeof need.location === 'object') {
+    need.location = { ...need.location, city: text };
+  } else {
+    need.location = { city: text, lat: null, lng: null };
+  }
+
+  // Update hidden fields
+  document.getElementById(`loc-lat-${id}`).value = '';
+  document.getElementById(`loc-lng-${id}`).value = '';
+
+  const statusEl = document.getElementById(`loc-status-${id}`);
+  if (!text.trim()) {
+    statusEl.className = 'loc-status empty';
+    statusEl.innerHTML = `<span class="material-symbols-outlined" style="font-size:12px">location_off</span> No location set`;
+    return;
+  }
+
+  // Show "geocoding…" immediately
+  statusEl.className = 'loc-status geocoding';
+  statusEl.innerHTML = `<span class="material-symbols-outlined spin" style="font-size:12px">sync</span> Looking up coordinates…`;
+
+  // Debounce — wait 800ms before hitting the API
+  clearTimeout(_geocodeTimers[id]);
+  _geocodeTimers[id] = setTimeout(async () => {
+    const result = await geocodeText(text);
+    if (result) {
+      // Update need.location in memory
+      need.location = result;
+      // Update hidden fields
+      document.getElementById(`loc-lat-${id}`).value = result.lat;
+      document.getElementById(`loc-lng-${id}`).value = result.lng;
+      // Show success
+      statusEl.className = 'loc-status geocoded';
+      statusEl.innerHTML = `<span class="material-symbols-outlined" style="font-size:12px;font-variation-settings:'FILL' 1">check_circle</span> Coordinates resolved (${result.lat.toFixed(4)}, ${result.lng.toFixed(4)})`;
+    } else {
+      // Geocoding failed — keep city text, coords will be resolved at publish time server-side
+      need.location = { city: text, lat: null, lng: null };
+      statusEl.className = 'loc-status failed';
+      statusEl.innerHTML = `<span class="material-symbols-outlined" style="font-size:12px">warning</span> Coordinates not found — server will retry on publish`;
+    }
+  }, 800);
+}
+
+// ── Toggle include ──────────────────────────────────────────
 function toggleInclude(id) {
   const need = needsData.find(n => n.id === id);
   if (!need) return;
@@ -292,17 +422,20 @@ function toggleInclude(id) {
   updateIncludedCount();
 }
 
-// ── Update a field ───────────────────────────────────────────
+// ── Update a field ──────────────────────────────────────────
 function updateField(id, field, value) {
   const need = needsData.find(n => n.id === id);
   if (need) need[field] = value;
 }
 
-// ── Urgency slider ───────────────────────────────────────────
+// ── Urgency slider ──────────────────────────────────────────
 function updateUrgency(id, val) {
   const score = parseInt(val);
   const need  = needsData.find(n => n.id === id);
-  if (need) { need.urgency_score = score; need.urgency_label = score >= 8 ? 'HIGH' : score >= 5 ? 'MEDIUM' : 'LOW'; }
+  if (need) {
+    need.urgency_score = score;
+    need.urgency_label = score >= 8 ? 'HIGH' : score >= 5 ? 'MEDIUM' : 'LOW';
+  }
   const badge = document.getElementById(`urgency-badge-${id}`);
   if (badge) {
     badge.textContent  = `${score} / 10`;
@@ -310,7 +443,7 @@ function updateUrgency(id, val) {
   }
 }
 
-// ── Skills ───────────────────────────────────────────────────
+// ── Skills ──────────────────────────────────────────────────
 function addSkill(id) {
   const input = document.getElementById(`skill-input-${id}`);
   const skill = input.value.trim();
@@ -333,17 +466,16 @@ function removeSkill(id, skill) {
   const need = needsData.find(n => n.id === id);
   if (need) need.required_skills = (need.required_skills||[]).filter(s => s !== skill);
   const wrap  = document.getElementById(`skills-${id}`);
-  const chips = wrap.querySelectorAll('.skill-chip');
-  chips.forEach(c => { if (c.dataset.skill === skill) c.remove(); });
+  wrap.querySelectorAll('.skill-chip').forEach(c => { if (c.dataset.skill === skill) c.remove(); });
 }
 
-// ── Count included ───────────────────────────────────────────
+// ── Count included ──────────────────────────────────────────
 function updateIncludedCount() {
   const n = needsData.filter(x => x.included).length;
   document.getElementById('includedCount').textContent = `${n} need${n!==1?'s':''}`;
 }
 
-// ── Load needs from API ──────────────────────────────────────
+// ── Load needs from API ─────────────────────────────────────
 async function loadNeeds() {
   try {
     const res = await fetch(`/api/ngo/report/${reportId}/needs`);
@@ -353,12 +485,10 @@ async function loadNeeds() {
 
     needsData = (data.needs || []).map(n => ({ ...n, included: true }));
 
-    // Subheading
     const fname = data.file_name || 'your report';
     document.getElementById('subheading').innerHTML =
       `We found <strong>${needsData.length}</strong> community need${needsData.length!==1?'s':''} in <span class="text-primary font-bold">${escHtml(fname)}</span>`;
 
-    // Render cards
     document.getElementById('needsList').innerHTML =
       needsData.length
         ? needsData.map((n, i) => buildCard(n, i)).join('')
@@ -379,7 +509,7 @@ async function loadNeeds() {
   }
 }
 
-// ── Publish ──────────────────────────────────────────────────
+// ── Publish ─────────────────────────────────────────────────
 document.getElementById('publishBtn').addEventListener('click', async () => {
   const toPublish = needsData.filter(n => n.included);
   if (!toPublish.length) { showToast('Select at least one need to publish.','error'); return; }
@@ -388,11 +518,25 @@ document.getElementById('publishBtn').addEventListener('click', async () => {
   btn.disabled   = true;
   btn.innerHTML  = `<span class="material-symbols-outlined spin">sync</span> Publishing…`;
 
+  // Build the payload — send the full location object so server
+  // can skip re-geocoding when coords are already present
+  const payload = toPublish.map(n => ({
+    id:               n.id,
+    title:            n.title,
+    description:      n.description,
+    category:         n.category,
+    urgency_score:    n.urgency_score,
+    urgency_label:    n.urgency_label,
+    required_skills:  n.required_skills || [],
+    location:         n.location,       // { city, lat, lng } or plain string
+    estimated_people: n.estimated_people,
+  }));
+
   try {
     const res = await fetch(`/api/ngo/report/${reportId}/publish`, {
       method:  'POST',
       headers: {'Content-Type':'application/json'},
-      body:    JSON.stringify({ needs: toPublish })
+      body:    JSON.stringify({ needs: payload })
     });
     if (!res.ok) throw new Error();
     const data = await res.json();
@@ -409,7 +553,6 @@ function escHtml(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-// Toast
 function showToast(msg, type='success') {
   const wrap = document.getElementById('toast-wrap');
   const el   = document.createElement('div');
@@ -423,15 +566,12 @@ function showToast(msg, type='success') {
   setTimeout(()=>{ el.style.opacity='0'; el.style.transition='opacity .3s'; setTimeout(()=>el.remove(),300); },4000);
 }
 
-// CSS for spin
 const st = document.createElement('style');
 st.textContent = `@keyframes spin{to{transform:rotate(360deg)}}.spin{animation:spin 1s linear infinite;display:inline-block}`;
 document.head.appendChild(st);
 
 // Init
-loadNeeds();
+loadOlaMapsKey().then(loadNeeds);
 </script>
-
-<div id="toast-wrap" style="position:fixed;bottom:80px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:10px;"></div>
 </body>
 </html>

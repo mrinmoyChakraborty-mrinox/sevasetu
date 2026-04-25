@@ -317,6 +317,7 @@ def api_report_needs(report_id):
 # Called from review page "Confirm & Post All Needs" button
 # ══════════════════════════════════════════════════════════════
  
+ 
 @app.route("/api/ngo/report/<report_id>/publish", methods=["POST"])
 def api_report_publish(report_id):
     if not session.get("user"):
@@ -326,11 +327,12 @@ def api_report_publish(report_id):
     data = request.get_json() or {}
     needs_to_publish = data.get("needs", [])
  
- 
     # Verify the NGO owns this report
     report_doc = firebase_services.get_report_by_report_id(report_id)
     if not report_doc.exists or report_doc.to_dict().get("ngo_id") != uid:
         return jsonify({"error": "Forbidden"}), 403
+ 
+    from services.geocoding_service import geocode_location_safe
  
     published_ids = []
  
@@ -339,7 +341,25 @@ def api_report_publish(report_id):
         if not need_id:
             continue
  
-        # Promote the draft need to "open" with any edits from the review page
+        # ── Resolve location ─────────────────────────────────────────
+        # The review page sends location as:
+        #   { city, lat, lng }  — if the NGO did NOT edit the field
+        #   "plain string"      — if the NGO typed a new/edited location
+        raw_loc = need_data.get("location", "")
+        if isinstance(raw_loc, dict) and raw_loc.get("lat") and raw_loc.get("lng"):
+            # Already a geocoded dict — use as-is
+            location = raw_loc
+        elif isinstance(raw_loc, dict):
+            # Dict but missing coords (e.g. fallback from geocoding_safe)
+            # Try re-geocoding using the city text
+            city_text = raw_loc.get("city", "")
+            location  = geocode_location_safe(city_text) if city_text else raw_loc
+        elif raw_loc and str(raw_loc).strip():
+            # NGO edited the location field → re-geocode
+            location = geocode_location_safe(str(raw_loc).strip())
+        else:
+            location = {"city": "", "lat": None, "lng": None}
+ 
         update = {
             "title":            need_data.get("title", ""),
             "description":      need_data.get("description", ""),
@@ -347,37 +367,29 @@ def api_report_publish(report_id):
             "urgency_score":    need_data.get("urgency_score", 5),
             "urgency_label":    need_data.get("urgency_label", "MEDIUM"),
             "required_skills":  need_data.get("required_skills", []),
-            "location":         need_data.get("location", ""),
+            "location":         location,           # always { city, lat, lng }
             "estimated_people": need_data.get("estimated_people"),
             "status":           "open",
             "updated_at":       firestore.SERVER_TIMESTAMP,
         }
-        firebase_services.update_need(need_id,update)
+        firebase_services.update_need(need_id, update)
         published_ids.append(need_id)
  
-        # ── Enqueue AI matching for this need via QStash ──────────────────────
-        # QStash will POST to /api/internal/run-matching in ~3 seconds.
-        # We enqueue once per need, so each gets its own matching job.
- 
-        # Build the payload — must be JSON-serialisable (no Firestore sentinels)
+        # ── Enqueue AI matching ───────────────────────────────────────
         need_payload = {
             **update,
             "ngo_id":     uid,
-            "created_at": None,   # Firestore SERVER_TIMESTAMP isn't serialisable
+            "created_at": None,
         }
- 
         enqueued = qstash_service.enqueue_matching(
             need_id   = need_id,
             need_data = need_payload,
         )
- 
         if not enqueued:
             logger.error(
-                f"[Publish] QStash enqueue failed for matching need_id={need_id!r}. "
-                "Volunteers will not be matched for this need automatically."
+                f"[Publish] QStash enqueue failed for matching need_id={need_id!r}."
             )
  
-    # Log activity once for the whole batch
     firebase_services.log_activity(
         uid,
         "created",
@@ -455,6 +467,45 @@ def api_skip_match(match_id):
     firebase_services.update_match_status(match_id, "skipped")
     return jsonify({"success": True})
 
+# ══════════════════════════════════════════════
+# NGO NEEDS PAGE
+# ══════════════════════════════════════════════
+
+# ══════════════════════════════════════════════
+# PAGE — NEEDS LIST
+# ══════════════════════════════════════════════
+
+@app.route("/ngo/needs")
+def ngo_needs_page():
+    if not session.get("user"):
+        return redirect("/getstarted")
+    if session["user"].get("role") != "ngo":
+        return redirect("/select-role")
+    return render_template("ngo_needs_list.html", user=session["user"])
+
+
+# ══════════════════════════════════════════════
+# API — ALL NEEDS FOR NGO
+# ══════════════════════════════════════════════
+
+@app.route("/api/ngo/needs")
+def api_ngo_needs():
+    if not session.get("user"):
+        return jsonify({"error": "Unauthorized"}), 401
+
+    uid = session["user"]["uid"]
+    all_needs = firebase_services.get_needs_by_ngo(uid)
+
+    # Serialize Firestore timestamps for JSON
+    for need in all_needs:
+        ts = need.get("created_at")
+        if ts and hasattr(ts, "timestamp"):
+            need["created_at"] = ts.timestamp()
+        ts2 = need.get("updated_at")
+        if ts2 and hasattr(ts2, "timestamp"):
+            need["updated_at"] = ts2.timestamp()
+
+    return jsonify({"needs": all_needs})
 
 
 
@@ -857,21 +908,11 @@ def ngo_onboarding():
 # ═════════════════════════════════════════════════════════════════════════════
  
 def _verify_or_abort():
-    """
-    Returns a 401 response if the request signature is invalid.
-    Returns None if the request is legitimate.
- 
-    In local development (no QSTASH_CURRENT_SIGNING_KEY set), this
-    always passes so you can test by calling the route directly.
-    """
-    raw_body  = request.get_data()
-    signature = request.headers.get("Upstash-Signature", "")
- 
-    if not qstash_service.verify_qstash_signature(raw_body, signature):
-        logger.warning("[Worker] Rejected request — bad QStash signature.")
+    # Check for the custom secret header
+    secret = request.headers.get("X-QStash-Secret")
+    if secret != os.environ.get("QSTASH_SECRET"):
         return jsonify({"error": "Unauthorized"}), 401
- 
-    return None   # all good
+    return None
  
  
 # ═════════════════════════════════════════════════════════════════════════════
@@ -928,22 +969,17 @@ def worker_process_report():
  
     # ── 4. Run Gemini extraction ───────────────────────────────────────────────
     try:
- 
         needs = gemini_service.extract_needs_from_url(image_url, file_type=file_type)
         logger.info(f"[Worker:process-report] Gemini found {len(needs)} needs.")
  
-        # Save each as a draft need
         firebase_services.save_extracted_needs_draft(ngo_uid, report_id, needs)
  
-        # Mark report as processed
-        update={
+        firebase_services.update_report_status(report_id, {
             "processed":   True,
             "status":      "processed",
             "needs_count": len(needs),
-        }
-        firebase_services.update_report_status(report_id,update)
+        })
  
-        # Log activity on the NGO's feed
         firebase_services.log_activity(
             ngo_uid,
             "created",
@@ -957,14 +993,15 @@ def worker_process_report():
     except Exception as exc:
         logger.error(f"[Worker:process-report] Failed — {exc}", exc_info=True)
  
-        # Mark as failed so the processing page can show an error
-        update={
+        # ── FIXED: use firebase_services, not undefined report_ref ──
+        # Also: 429 quota errors now reach here (not swallowed in gemini_service)
+        # so QStash will retry this job automatically after backoff.
+        firebase_services.update_report_status(report_id, {
             "status": "failed",
             "error":  str(exc)[:500],
-        }
-        firebase_services.update_report_status(report_id,update)
+        })
  
-        # Return 500 so QStash retries (up to the retry limit you set)
+        # Return 500 → QStash retries (up to the retry count set at enqueue time)
         return jsonify({"error": str(exc)}), 500
  
  
