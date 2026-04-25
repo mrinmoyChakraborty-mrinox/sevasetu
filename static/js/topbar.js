@@ -11,6 +11,8 @@
 
 'use strict';
 
+let foregroundHandlerReady = false;
+
 (async function initTopBar() {
 
     // ── 0. Fetch topbar data (avatar + notification state) ──────
@@ -45,14 +47,19 @@
 
     // ── 3. Notification bell logic ───────────────────────────────
     const bellBtn = document.getElementById('topbar-bell-btn');
+    _setupLogoutHandler();
     if (!bellBtn) return;
 
     // If already enabled in Firestore, still set up foreground handler
     // but hide the bell (user already opted in)
     if (topbarData.notifications_enabled) {
         bellBtn.style.display = 'none';
-        // Still need to set up foreground message handler for this session
-        await _setupForegroundHandler();
+        // Still need to set up this browser's token and foreground handler.
+        if ('Notification' in window && Notification.permission === 'granted') {
+            await _requestAndSaveFcmToken(null, false);
+        } else {
+            await _setupForegroundHandler();
+        }
         return;
     }
 
@@ -64,7 +71,7 @@
 
     // Permission already granted at browser level — save token silently
     if (Notification.permission === 'granted') {
-        await _requestAndSaveFcmToken(bellBtn);
+        await _requestAndSaveFcmToken(bellBtn, false);
         return;
     }
 
@@ -72,11 +79,8 @@
     bellBtn.style.display = 'flex';
     bellBtn.title = 'Enable push notifications';
     bellBtn.addEventListener('click', async () => {
-        await _requestAndSaveFcmToken(bellBtn);
+        await _requestAndSaveFcmToken(bellBtn, true);
     });
-
-    // ── 4. Logout interceptor ──────────────────────────────────
-    _setupLogoutHandler();
 
 })();
 
@@ -132,6 +136,7 @@ async function _waitForSWActivation(registration) {
 // Internal: Set up foreground message handler (no bell interaction needed)
 // ────────────────────────────────────────────────────────────────
 async function _setupForegroundHandler() {
+    if (foregroundHandlerReady) return;
     if (!('serviceWorker' in navigator)) return;
 
     try {
@@ -155,6 +160,7 @@ async function _setupForegroundHandler() {
             console.log('[topbar] Foreground message:', payload);
             _showForegroundNotification(payload);
         });
+        foregroundHandlerReady = true;
 
     } catch (err) {
         console.error('[topbar] Foreground handler setup failed:', err);
@@ -164,7 +170,7 @@ async function _setupForegroundHandler() {
 // ────────────────────────────────────────────────────────────────
 // Internal: Request FCM token, save it, wire foreground handler
 // ────────────────────────────────────────────────────────────────
-async function _requestAndSaveFcmToken(bellBtn) {
+async function _requestAndSaveFcmToken(bellBtn, showSuccessToast = true) {
     try {
         // Step 1 — ask for permission
         const permission = await Notification.requestPermission();
@@ -226,10 +232,13 @@ async function _requestAndSaveFcmToken(bellBtn) {
         console.log('[topbar] FCM token obtained');
 
         // Step 6 — Set up foreground message handler
-        onMessage(messaging, (payload) => {
-            console.log('[topbar] Foreground message received:', payload);
-            _showForegroundNotification(payload);
-        });
+        if (!foregroundHandlerReady) {
+            onMessage(messaging, (payload) => {
+                console.log('[topbar] Foreground message received:', payload);
+                _showForegroundNotification(payload);
+            });
+            foregroundHandlerReady = true;
+        }
 
         // Step 7 — Save token locally and to backend
         localStorage.setItem('current_fcm_token', fcmToken);
@@ -243,7 +252,9 @@ async function _requestAndSaveFcmToken(bellBtn) {
         // Step 8 — hide bell
         if (bellBtn) bellBtn.style.display = 'none';
 
-        _showTopbarToast('🔔 Push notifications enabled!');
+        if (showSuccessToast) {
+            _showTopbarToast('Push notifications enabled!');
+        }
 
     } catch (err) {
         console.error('[topbar] FCM registration failed:', err);
@@ -256,33 +267,18 @@ async function _requestAndSaveFcmToken(bellBtn) {
 // ────────────────────────────────────────────────────────────────
 function _showForegroundNotification(payload) {
     const title = payload.notification?.title || 'SevaSetu';
-    const body  = payload.notification?.body  || '';
     const data  = payload.data || {};
+    const body  = payload.notification?.body || data.message_preview || '';
+
+    if (data.type === 'new_message' && window.location.pathname.startsWith('/inbox')) {
+        return;
+    }
+
+    const clickUrl = data.click_action || (data.conversation_id ? `/inbox?conv_id=${data.conversation_id}` : null);
 
     // Show as an in-app toast (browser Notification API requires a gesture on some browsers
     // when the page is already focused, so we use our own toast instead)
-    _showTopbarToast(`🔔 ${title}: ${body}`, data.click_action || null);
-
-    // Also try the Notification API for a proper system notification
-    if (Notification.permission === 'granted') {
-        try {
-            const n = new Notification(title, {
-                body,
-                icon: '/static/images/logo.png',
-                data,
-            });
-            if (data.click_action) {
-                n.addEventListener('click', () => {
-                    window.focus();
-                    window.location.href = data.click_action;
-                    n.close();
-                });
-            }
-        } catch (e) {
-            // Some browsers block Notification() when page is focused — that's fine,
-            // we already showed the toast above
-        }
-    }
+    _showTopbarToast(`${title}: ${body}`, clickUrl);
 }
 
 // ────────────────────────────────────────────────────────────────

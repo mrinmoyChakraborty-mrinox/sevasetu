@@ -11,6 +11,52 @@
  *   SW has network access even when the page is closed.
  */
 
+function getPayloadJson(event) {
+    if (!event.data) return {};
+
+    try {
+        return event.data.json();
+    } catch (err) {
+        try {
+            return JSON.parse(event.data.text());
+        } catch {
+            return {};
+        }
+    }
+}
+
+function getPushData(payload) {
+    return payload.data || payload.notification?.data || payload.webpush?.data || {};
+}
+
+function getNotificationOptions(payload) {
+    const data = getPushData(payload);
+    const notification = payload.notification || payload.webpush?.notification || {};
+    const title = notification.title || data.title || "SevaSetu";
+    const body = notification.body || data.body || data.message_preview || "You have a new notification";
+
+    return {
+        title,
+        options: {
+            body,
+            icon: notification.icon || "/static/images/logo.png",
+            badge: notification.badge || "/static/images/logo.png",
+            tag: notification.tag || data.type || "sevasetu-notification",
+            data,
+            requireInteraction: false,
+        },
+    };
+}
+
+self.addEventListener("push", (event) => {
+    event.stopImmediatePropagation();
+
+    const payload = getPayloadJson(event);
+    const { title, options } = getNotificationOptions(payload);
+
+    event.waitUntil(self.registration.showNotification(title, options));
+});
+
 importScripts("https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js");
 importScripts("https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js");
 

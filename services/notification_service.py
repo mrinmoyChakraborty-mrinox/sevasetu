@@ -1,4 +1,5 @@
 import logging
+import os
 import firebase_admin
 from firebase_admin import messaging, firestore
 from services import firebase_services
@@ -26,12 +27,34 @@ def send_fcm_notification(uid, title, body, data=None):
         for k, v in data.items():
             fcm_data[str(k)] = str(v)
 
+    click_action = fcm_data.get("click_action") or "/"
+    app_base_url = os.environ.get("APP_BASE_URL", "").rstrip("/")
+    webpush_link = (
+        f"{app_base_url}{click_action}"
+        if app_base_url.startswith(("https://", "http://")) and click_action.startswith("/")
+        else click_action
+    )
+    webpush_options = None
+    if webpush_link.startswith(("https://", "http://")):
+        webpush_options = messaging.WebpushFCMOptions(link=webpush_link)
+
     message = messaging.MulticastMessage(
         notification=messaging.Notification(
             title=title,
             body=body,
         ),
         data=fcm_data,
+        webpush=messaging.WebpushConfig(
+            notification=messaging.WebpushNotification(
+                title=title,
+                body=body,
+                icon="/static/images/logo.png",
+                badge="/static/images/logo.png",
+                tag=fcm_data.get("type", "sevasetu-notification"),
+                data=fcm_data,
+            ),
+            fcm_options=webpush_options,
+        ),
         tokens=tokens,
     )
 
@@ -98,13 +121,16 @@ def notify_ngo_volunteer_accepted(ngo_id, vol_name, need_title):
 
 def notify_new_message(sender_name, recipient_uid, message_text, conversation_id):
     """Notify a user about a new chat message."""
+    preview = message_text if len(message_text) < 100 else f"{message_text[:97]}..."
     return send_fcm_notification(
         uid=recipient_uid,
-        title=f"New message from {sender_name} 💬",
-        body=message_text if len(message_text) < 100 else f"{message_text[:97]}...",
+        title=f"New message from {sender_name}",
+        body=preview,
         data={
             "type": "new_message",
             "conversation_id": conversation_id,
-            "click_action": "/inbox" # Or specific conversation URL if we have one
+            "sender_name": sender_name,
+            "message_preview": preview,
+            "click_action": f"/inbox?conv_id={conversation_id}"
         }
     )
