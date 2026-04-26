@@ -1800,7 +1800,7 @@ def ngo_report_review_page(need_id):
     vol_id = report.get("volunteer_id")
     vol_profile = firebase_services.get_volunteer_profile(vol_id) if vol_id else {}
     
-    return render_template("ngo_review_report.html", 
+    return render_template("ngo-review-report.html", 
                            need=need, 
                            report=report, 
                            volunteer=vol_profile,
