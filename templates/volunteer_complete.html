@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+
+{% block title %}Complete Task | SevaSetu{% endblock %}
+
+{% block head %}
+<style>
+    body { background: #f8f9ff; }
+    .form-card {
+        background: white;
+        border-radius: 1.5rem;
+        padding: 2.5rem;
+        box-shadow: 0 20px 50px rgba(0, 108, 68, 0.05);
+        border: 1px solid rgba(0, 108, 68, 0.05);
+    }
+    .sage-gradient {
+        background: linear-gradient(135deg, #006c44 0%, #4caf7d 100%);
+    }
+    .input-field {
+        width: 100%;
+        background: #f8f9ff;
+        border: 1.5px solid transparent;
+        border-radius: 1rem;
+        padding: 1rem 1.25rem;
+        transition: all 0.2s;
+        font-weight: 500;
+    }
+    .input-field:focus {
+        border-color: #4caf7d;
+        background: white;
+        outline: none;
+        box-shadow: 0 0 0 4px rgba(76, 175, 125, 0.1);
+    }
+    .section-label {
+        font-size: 0.75rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #3e4942;
+        margin-bottom: 0.75rem;
+        display: block;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="max-w-4xl mx-auto px-6 py-12 pb-32">
+    <!-- Back Link -->
+    <div class="mb-8">
+        <a href="/volunteer/dashboard" class="inline-flex items-center gap-2 text-on-surface-variant hover:text-primary transition-colors font-bold text-sm">
+            <span class="material-symbols-outlined" style="font-size:18px">arrow_back</span>
+            Back to Dashboard
+        </a>
+    </div>
+
+    <!-- Hero Card -->
+    <section class="bg-white rounded-3xl p-8 mb-10 shadow-sm border border-emerald-50 relative overflow-hidden">
+        <div class="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16"></div>
+        <div class="relative z-10">
+            <div class="flex items-center gap-3 mb-4">
+                <span class="px-3 py-1 rounded-full bg-secondary-fixed text-on-secondary-fixed text-[10px] font-black tracking-widest uppercase">Completion Report Pending</span>
+            </div>
+            <h1 class="text-3xl font-black text-on-surface tracking-tight mb-2">{{ need.title }}</h1>
+            <div class="flex items-center gap-6 text-on-surface-variant">
+                <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">corporate_fare</span>
+                    <span class="font-bold text-sm">{{ need.ngo_name or "NGO" }}</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">location_on</span>
+                    <span class="font-bold text-sm">{{ need.location.city if need.location is mapping else need.location }}</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Completion Form -->
+    <section>
+        <div class="flex items-center gap-4 mb-8">
+            <div class="w-10 h-1 bg-primary rounded-full"></div>
+            <h2 class="text-2xl font-black text-on-surface">Volunteer Completion Report</h2>
+        </div>
+
+        <form id="completionForm" class="space-y-8" enctype="multipart/form-data">
+            <input type="hidden" name="need_id" value="{{ need.id }}">
+            
+            <div class="form-card space-y-8">
+                <!-- Status & Hours -->
+                <div class="grid md:grid-cols-2 gap-8">
+                    <div class="space-y-2">
+                        <label class="section-label">Work Completion Status *</label>
+                        <select name="completion_status" class="input-field" required>
+                            <option value="fully_completed">Fully completed</option>
+                            <option value="partially_completed">Partially completed</option>
+                            <option value="could_not_complete">Could not complete</option>
+                        </select>
+                    </div>
+                    <div class="space-y-2">
+                        <label class="section-label">Hours Contributed *</label>
+                        <div class="relative">
+                            <input name="hours" type="number" step="0.5" class="input-field" placeholder="0.0" required>
+                            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant font-bold text-sm">hours</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Descriptions -->
+                <div class="space-y-6">
+                    <div class="space-y-2">
+                        <label class="section-label">Description of Work *</label>
+                        <textarea name="description" rows="4" class="input-field resize-none" placeholder="Briefly describe what tasks you performed..." required></textarea>
+                    </div>
+                    <div class="space-y-2">
+                        <label class="section-label">Impact Summary *</label>
+                        <textarea name="impact" rows="4" class="input-field resize-none" placeholder="What difference did this work make to the community?" required></textarea>
+                    </div>
+                </div>
+
+                <!-- Proof Upload -->
+                <div class="space-y-4">
+                    <label class="section-label">Upload Proof (Photo) *</label>
+                    <input type="file" id="proofInput" name="proof" accept="image/*" class="hidden" required>
+                    <div id="uploadZone" class="w-full border-2 border-dashed border-emerald-100 rounded-2xl p-10 flex flex-col items-center justify-center gap-4 bg-emerald-50/20 hover:bg-emerald-50/50 transition-all cursor-pointer group"
+                         onclick="document.getElementById('proofInput').click()">
+                        <div class="w-14 h-14 rounded-full bg-white shadow-sm flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                            <span class="material-symbols-outlined text-2xl">cloud_upload</span>
+                        </div>
+                        <div class="text-center">
+                            <p class="font-bold text-on-surface text-sm">Click to upload photo evidence</p>
+                            <p class="text-[10px] text-on-surface-variant font-black tracking-widest uppercase mt-1">JPG or PNG (max 10MB)</p>
+                        </div>
+                    </div>
+                    <div id="proofPreview" class="hidden relative w-full aspect-video rounded-2xl overflow-hidden border border-emerald-100 shadow-inner">
+                        <img id="previewImg" class="w-full h-full object-cover" src="" alt="Proof">
+                        <button type="button" id="removeProof" class="absolute top-4 right-4 w-10 h-10 rounded-full bg-white shadow-lg flex items-center justify-center text-error hover:scale-110 transition-transform">
+                            <span class="material-symbols-outlined">close</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Notes -->
+                <div class="space-y-2">
+                    <label class="section-label">Additional Notes</label>
+                    <textarea name="notes" rows="3" class="input-field resize-none" placeholder="Any obstacles or additional thoughts?"></textarea>
+                </div>
+
+                <!-- Confirmation -->
+                <div class="flex items-start gap-4 p-6 bg-primary-fixed/10 rounded-2xl border border-primary/5">
+                    <input type="checkbox" id="confirm" class="mt-1 w-5 h-5 rounded border-primary/20 text-primary focus:ring-primary/20" required>
+                    <label for="confirm" class="text-xs font-bold text-on-primary-container leading-relaxed">
+                        I confirm that the information provided is accurate and representative of the work I performed.
+                    </label>
+                </div>
+
+                <!-- Actions -->
+                <div class="flex flex-col md:flex-row items-center gap-4 pt-4">
+                    <button id="submitBtn" type="submit" class="w-full md:w-auto px-10 py-4 sage-gradient text-white font-black text-lg rounded-full shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all">
+                        Submit Report
+                    </button>
+                    <a href="/volunteer/dashboard" class="w-full md:w-auto px-10 py-4 text-center text-on-surface-variant font-black text-sm hover:text-error transition-colors">
+                        Cancel
+                    </a>
+                </div>
+            </div>
+        </form>
+    </section>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/task_completion.js') }}"></script>
+{% endblock %}
