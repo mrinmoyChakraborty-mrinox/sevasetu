@@ -6,7 +6,7 @@ import json
 from firebase_admin import firestore
 from datetime import datetime, timezone
 import math
-from services import imagekit_services,firebase_services,gemini_service,matching_service,qstash_service
+from services import imagekit_services,firebase_services,gemini_service,matching_service,qstash_service,notification_service
 
 
 
@@ -1148,6 +1148,119 @@ def volunteer_complete_page(need_id):
                            need=need,
                            user=session["user"])
 
+# ── Admin dashboard page ──────────────────────────────────────────
+@app.route("/admin/dashboard")
+def admin_dashboard():
+    if not session.get("user") or session["user"].get("role") != "admin":
+        return redirect("/getstarted")
+    return render_template("admin_dashboard.html")
+
+
+# ── Admin dashboard data API ──────────────────────────────────────
+@app.route("/api/admin/dashboard")
+def api_admin_dashboard():
+    
+    if not session.get("user") or session["user"].get("role") != "admin":
+        return jsonify({"error": "Unauthorized"}), 401
+
+    db = firebase_services.get_db()
+
+    # ── 1. All NGOs ───────────────────────────────────────────────
+    ngo_docs  = list(db.collection("ngos").stream())
+    ngos      = [{"uid": d.id, **d.to_dict()} for d in ngo_docs]
+
+    # ── 2. All Volunteers ─────────────────────────────────────────
+    vol_docs  = list(db.collection("volunteers").stream())
+
+    # ── 3. All Needs ─────────────────────────────────────────────
+    need_docs = list(db.collection("needs").stream())
+    needs     = [d.to_dict() for d in need_docs]
+
+    # ── 4. Stats ──────────────────────────────────────────────────
+    open_needs     = [n for n in needs if n.get("status") == "open"]
+    resolved_needs = [n for n in needs if n.get("status") == "completed"]
+    urgent_needs   = [n for n in needs if n.get("urgency_score", 0) >= 7]
+
+    stats = {
+        "total_ngos":        len(ngos),
+        "total_volunteers":  len(vol_docs),
+        "total_needs":       len(needs),
+        "open_needs":        len(open_needs),
+        "resolved_needs":    len(resolved_needs),
+        "urgent_needs":      len(urgent_needs),
+    }
+
+    # ── 5. Recent NGOs (latest 10) ────────────────────────────────
+    def _sort_key(n):
+        ts = n.get("createdAt")
+        if ts and hasattr(ts, "timestamp"):
+            return ts.timestamp()
+        return 0
+
+    recent_ngos = sorted(ngos, key=_sort_key, reverse=True)[:10]
+
+    # Serialize Firestore timestamps in NGO docs
+    for ngo in recent_ngos:
+        ts = ngo.get("createdAt")
+        if ts and hasattr(ts, "timestamp"):
+            ngo["createdAt"] = {"_seconds": int(ts.timestamp())}
+
+    # ── 6. Pending (unverified) NGOs ──────────────────────────────
+    pending_ngos = [n for n in ngos if not n.get("verified")]
+
+    for ngo in pending_ngos:
+        ts = ngo.get("createdAt")
+        if ts and hasattr(ts, "timestamp"):
+            ngo["createdAt"] = {"_seconds": int(ts.timestamp())}
+
+    # ── 7. Category breakdown ─────────────────────────────────────
+    category_breakdown = {}
+    for need in needs:
+        if need.get("status") == "deleted":
+            continue
+        cat = need.get("category", "Other") or "Other"
+        category_breakdown[cat] = category_breakdown.get(cat, 0) + 1
+
+    # ── 8. Recent activity (cross-NGO, latest 8) ──────────────────
+    activity_items = []
+    for ngo in ngos[:15]:                      # cap to avoid too many reads
+        ngo_id = ngo.get("uid")
+        if not ngo_id:
+            continue
+        act_docs = (
+            db.collection("ngos")
+              .document(ngo_id)
+              .collection("activity")
+              .order_by("created_at", direction=firestore.Query.DESCENDING)
+              .limit(3)
+              .stream()
+        )
+        for doc in act_docs:
+            d = doc.to_dict()
+            d["id"] = doc.id
+            d["ngo_name"] = ngo.get("org_name", "")
+            ts = d.get("created_at")
+            if ts and hasattr(ts, "timestamp"):
+                d["created_at"] = {"_seconds": int(ts.timestamp())}
+            activity_items.append(d)
+
+    # Sort by timestamp descending, take 8
+    def _act_sort(a):
+        ts = a.get("created_at")
+        if isinstance(ts, dict):
+            return ts.get("_seconds", 0)
+        return 0
+
+    activity_items.sort(key=_act_sort, reverse=True)
+    activity_items = activity_items[:8]
+
+    return jsonify({
+        "stats":              stats,
+        "recent_ngos":        recent_ngos,
+        "pending_ngos":       pending_ngos[:6],
+        "category_breakdown": category_breakdown,
+        "activity":           activity_items,
+    })
 # ======================
 # Firebase Config API
 # ======================
@@ -1373,3 +1486,133 @@ def api_chat_start_with_vol(need_id):
     uid = session["user"]["uid"]
     conv_id = firebase_services.get_or_create_conversation([uid, vol_uid], need_id)
     return jsonify({"success": True, "conversation_id": conv_id})
+
+@app.route("/api/volunteer/task/complete", methods=["POST"])
+def api_volunteer_task_complete():
+    """Handle volunteer completion report submission."""
+    if not session.get("user"):
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    uid = session["user"]["uid"]
+    need_id = request.form.get("need_id")
+    if not need_id:
+        return jsonify({"error": "Need ID required"}), 400
+    
+    # Process file upload
+    proof_file = request.files.get("proof")
+    proof_url = ""
+    if proof_file:
+        result = imagekit_services.upload_task_proof(uid, need_id, proof_file)
+        if result:
+            proof_url = result.get("url")
+    
+    # Update need status to 'in_review' and store report data
+    report_data = {
+        "volunteer_id": uid,
+        "completion_status": request.form.get("completion_status"),
+        "hours": float(request.form.get("hours", 0)),
+        "description": request.form.get("description"),
+        "impact": request.form.get("impact"),
+        "notes": request.form.get("notes"),
+        "proof_url": proof_url,
+        "submitted_at": firestore.SERVER_TIMESTAMP
+    }
+    
+    db = firebase_services.get_db()
+    db.collection("needs").document(need_id).update({
+        "status": "in_review",
+        "completion_report": report_data
+    })
+    
+    # Update match status if exists
+    matches = db.collection("matches").where("need_id", "==", need_id).where("volunteer_id", "==", uid).limit(1).stream()
+    for doc in matches:
+        doc.reference.update({"status": "in_review"})
+
+    # ── Notify NGO ──
+    try:
+        from services import notification_service
+        need_doc = db.collection("needs").document(need_id).get()
+        if need_doc.exists:
+            need_data = need_doc.to_dict()
+            ngo_id = need_data.get("ngo_id")
+            need_title = need_data.get("title", "a task")
+            
+            vol_profile = firebase_services.get_volunteer_profile(uid)
+            vol_name = vol_profile.get("name", "A volunteer")
+            
+            if ngo_id:
+                notification_service.notify_ngo_report_submitted(ngo_id, vol_name, need_title, need_id)
+                
+                # Log activity for NGO
+                firebase_services.log_activity(
+                    ngo_id,
+                    "warning",
+                    f"{vol_name} submitted completion report",
+                    f'For: "{need_title}"'
+                )
+    except Exception as e:
+        print(f"Report submission notification failed: {e}")
+
+    return jsonify({"success": True, "redirect": "/volunteer/task/success"})
+
+@app.route("/volunteer/task/success")
+def volunteer_task_success():
+    if not session.get("user"):
+        return redirect("/getstarted")
+    return render_template("completion-success-state.html", user=session["user"])
+
+@app.route("/ngo/report/review/<need_id>")
+def ngo_report_review_page(need_id):
+    """NGO page to review a submitted task report."""
+    if not session.get("user"):
+        return redirect("/getstarted")
+    if session["user"].get("role") != "ngo":
+        return redirect("/select-role")
+    
+    need = firebase_services.get_need_by_id(need_id)
+    if not need or need.get("status") != "in_review":
+        return "Report not found or not in review", 404
+    
+    # Get volunteer details for the report
+    report = need.get("completion_report", {})
+    vol_id = report.get("volunteer_id")
+    vol_profile = firebase_services.get_volunteer_profile(vol_id) if vol_id else {}
+    
+    return render_template("ngo_review_report.html", 
+                           need=need, 
+                           report=report, 
+                           volunteer=vol_profile,
+                           user=session["user"])
+
+@app.route("/api/ngo/report/action", methods=["POST"])
+def api_ngo_report_action():
+    """Approve or Reject/Request Changes on a report."""
+    if not session.get("user"):
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    data = request.json
+    need_id = data.get("need_id")
+    action = data.get("action") # 'approve' or 'reject'
+    
+    if not need_id or not action:
+        return jsonify({"error": "Missing data"}), 400
+        
+    db = firebase_services.get_db()
+    need_ref = db.collection("needs").document(need_id)
+    need = need_ref.get().to_dict()
+    
+    if action == "approve":
+        need_ref.update({"status": "completed"})
+        # Update match
+        vol_id = need.get("completion_report", {}).get("volunteer_id")
+        if vol_id:
+            matches = db.collection("matches").where("need_id", "==", need_id).where("volunteer_id", "==", vol_id).limit(1).stream()
+            for doc in matches:
+                doc.reference.update({"status": "completed"})
+    else:
+        # Revert to in_progress or assigned if rejected
+        need_ref.update({"status": "in_progress"})
+        # Add a note maybe?
+        
+    return jsonify({"success": True})

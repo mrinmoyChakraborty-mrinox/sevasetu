@@ -9,7 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 
-  <link rel="stylesheet" href="style.css"/>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_dashboard.css') }}"/>
 </head>
 <body>
 
@@ -865,7 +865,7 @@
 
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
-<script src="app.js"></script>
+<script src="{{ url_for('static', filename='js/admin_dashboard.js') }}"></script>
 
 <!-- Responsive: stack columns on smaller screens -->
 <style>

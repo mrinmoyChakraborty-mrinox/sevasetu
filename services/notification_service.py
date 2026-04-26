@@ -134,3 +134,17 @@ def notify_new_message(sender_name, recipient_uid, message_text, conversation_id
             "click_action": f"/inbox?conv_id={conversation_id}"
         }
     )
+    
+def notify_ngo_report_submitted(ngo_id, vol_name, need_title, need_id):
+    """Notify an NGO that a volunteer has submitted a completion report."""
+    return send_fcm_notification(
+        uid=ngo_id,
+        title="Completion Report Submitted! 📄",
+        body=f"{vol_name} has submitted a report for '{need_title}'. Please review it.",
+        data={
+            "type": "report_submitted",
+            "need_id": need_id,
+            "click_action": f"/ngo/report/review/{need_id}"
+        }
+    )
+

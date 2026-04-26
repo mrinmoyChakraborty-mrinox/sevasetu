@@ -243,8 +243,7 @@ function showSkeletons() {
 }
 
 function viewNeedDetail(id) {
-  // Placeholder — link to a detail page when implemented
-  showToast('Need detail page coming soon.', 'success');
+  window.location.href = `/need/${id}/ngo`;
 }
 
 // ══════════════════════════════════════════════════════════════

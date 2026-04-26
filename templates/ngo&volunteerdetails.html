@@ -276,9 +276,11 @@
             </span>
             <span class="badge" style="background:#f0faf5;color:#006c44;">{{ need.category }}</span>
             {% set s = need.status %}
-            <span class="badge badge-{{ s.replace('_','-') if s else 'open' }}">
+            {% set display_status = 'POSTED' if s == 'open' else ('PROGRESSING' if s in ['assigned', 'in_progress'] else (s.upper().replace('_', ' ') if s else 'POSTED')) %}
+            {% set status_cls = 'badge-open' if s == 'open' else ('badge-in_progress' if s in ['assigned', 'in_progress'] else ('badge-completed' if s == 'completed' else 'badge-open')) %}
+            <span class="badge {{ status_cls }}">
               <span class="badge-dot"></span>
-              {{ s.upper().replace('_',' ') if s else 'OPEN' }}
+              {{ display_status }}
             </span>
           </div>
 
@@ -450,6 +452,17 @@
               <span class="material-symbols-outlined" style="font-size:3rem;color:#bdcabf;display:block;margin-bottom:8px;">person_search</span>
               <p style="font-weight:700;color:#3e4942;">No volunteer assigned yet</p>
               <p style="font-size:.8rem;color:#6e7a71;margin-top:4px;">AI is matching volunteers — check the dashboard for suggestions.</p>
+            </div>`;
+        } else if (status === "in_review") {
+          html += `
+            <div style="text-align:center;padding:20px 0;">
+              <span class="material-symbols-outlined" style="font-size:3rem;color:var(--secondary);display:block;margin-bottom:8px;">assignment_late</span>
+              <p style="font-weight:700;color:var(--secondary);">Report Submitted</p>
+              <p style="font-size:.8rem;color:#6e7a71;margin-top:4px;">The volunteer has submitted a completion report.</p>
+              <a href="/ngo/report/review/${NEED_ID}" class="btn btn-primary" style="margin-top:16px;text-decoration:none;">
+                <span class="material-symbols-outlined" style="font-size:18px">visibility</span>
+                See Completion Report
+              </a>
             </div>`;
         } else if (status === "completed") {
           html += `

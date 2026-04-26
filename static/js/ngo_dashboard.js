@@ -738,36 +738,69 @@ window.openManual = function() {
 // ─────────────────────────────────────────────
 
 function showSkeletons() {
+  // 1. Welcome
+  const welcome = document.getElementById("welcomeHeading");
+  if (welcome) {
+    welcome.innerHTML = '<div class="h-10 w-64 skeleton"></div>';
+  }
+
+  // 2. Stats
   ["statOpenNeeds","statAssignedNeeds","statCompleted","statVolunteers"].forEach(id => {
     const el = document.getElementById(id);
-    if (el) { el.textContent = "—"; el.classList.add("skeleton"); }
+    if (el) { el.innerHTML = '<div class="h-10 w-16 skeleton mx-auto"></div>'; }
   });
 
+  // 3. Recent Needs
   const needsContainer = document.getElementById("recentNeedsContainer");
   if (needsContainer) {
     needsContainer.innerHTML = [1,2,3].map(() => `
-      <div class="p-8 flex items-center justify-between" style="pointer-events:none;">
+      <div class="p-8 flex items-center justify-between">
         <div class="flex items-center gap-6 flex-1">
-          <div class="w-2 h-12 skeleton rounded-full"></div>
-          <div class="space-y-2 flex-1">
-            <div class="h-4 skeleton rounded w-2/3"></div>
+          <div class="w-2 h-12 skeleton rounded-full flex-shrink-0"></div>
+          <div class="space-y-3 flex-1">
+            <div class="h-5 skeleton rounded w-2/3"></div>
             <div class="h-3 skeleton rounded w-1/3"></div>
           </div>
         </div>
-        <div class="h-8 w-16 skeleton rounded-full ml-4"></div>
+        <div class="h-10 w-24 skeleton rounded-full ml-4"></div>
       </div>`).join('<hr class="border-surface-container"/>');
   }
 
+  // 4. Suggested Matches
   const matchesContainer = document.getElementById("matchesContainer");
   if (matchesContainer) {
     matchesContainer.innerHTML = [1,2].map(() => `
-      <div class="flex items-center gap-4" style="pointer-events:none;">
-        <div class="w-14 h-14 rounded-full skeleton flex-shrink-0"></div>
-        <div class="space-y-2 flex-1">
-          <div class="h-4 skeleton rounded w-1/2"></div>
-          <div class="h-3 skeleton rounded w-1/3"></div>
+      <div class="flex flex-col gap-4">
+        <div class="flex items-start gap-4">
+          <div class="w-14 h-14 rounded-full skeleton flex-shrink-0"></div>
+          <div class="space-y-3 flex-1 pt-1">
+            <div class="h-4 skeleton rounded w-1/2"></div>
+            <div class="h-2 skeleton rounded w-1/3"></div>
+            <div class="h-2 skeleton rounded w-1/4"></div>
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <div class="h-11 flex-1 skeleton rounded-full"></div>
+          <div class="h-11 w-11 skeleton rounded-full"></div>
+          <div class="h-11 flex-1 skeleton rounded-full"></div>
         </div>
       </div>`).join("<hr class='border-surface-container my-6'/>");
+  }
+
+  // 5. Activity Feed
+  const activityContainer = document.getElementById("activityContainer");
+  if (activityContainer) {
+    activityContainer.innerHTML = [1,2,3].map(() => `
+      <div class="relative pl-10">
+        <div class="absolute left-0 top-1 w-7 h-7 rounded-full skeleton border-[3px] border-white"></div>
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+          <div class="space-y-2 flex-1">
+            <div class="h-4 skeleton rounded w-1/3"></div>
+            <div class="h-3 skeleton rounded w-1/2"></div>
+          </div>
+          <div class="h-6 w-20 skeleton rounded-full"></div>
+        </div>
+      </div>`).join('<div class="mt-8"></div>');
   }
 }
 
