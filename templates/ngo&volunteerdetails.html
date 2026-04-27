@@ -953,7 +953,7 @@
         } catch { break; }
       }
     }
-    // ── NGO Live Tracking Map ────────────────────────
+  // ── NGO Live Tracking Map ────────────────────────
     let _ngoMapInstance = null;
     let _ngoMarkerInstance = null;
     let _ngoPollInterval = null;
@@ -963,18 +963,31 @@
       const { OLA_MAPS_API_KEY } = await keyRes.json();
       if (!OLA_MAPS_API_KEY) return;
 
+      // Prevent loading into the ocean (blue screen)
+      // Grab the Task Location as the default center while waiting for volunteer
+      let startLng = 77.5946;
+      let startLat = 12.9716;
+      try {
+          const res = await fetch(`/api/need/${NEED_ID}`);
+          const data = await res.json();
+          if (data.need && data.need.location && data.need.location.lat) {
+              startLat = data.need.location.lat;
+              startLng = data.need.location.lng;
+          }
+      } catch(e) {}
+
       const olaMaps = new OlaMaps({ apiKey: OLA_MAPS_API_KEY });
       
       _ngoMapInstance = olaMaps.init({
         style: "https://api.olamaps.io/tiles/vector/v1/styles/default-light-standard/style.json",
         container: "ngoLiveMap",
-        center: [0, 0], 
+        center: [startLng, startLat], 
         zoom: 14
       });
 
       _ngoMapInstance.on('load', () => {
         _pollVolunteerLocation();
-        _ngoPollInterval = setInterval(_pollVolunteerLocation, 30000); 
+        _ngoPollInterval = setInterval(_pollVolunteerLocation, 10000); // Check every 10 seconds 
       });
     }
 

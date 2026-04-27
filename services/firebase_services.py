@@ -693,10 +693,18 @@ def volunteer_complete_task(match_id, vol_id, proof_url=None):
 
 
 def start_work_session(match_id, vol_id):
-    """Start a work session for a task."""
-    batch = db.batch()
-    
+    """Marks the task as in_progress and records start time."""
     match_ref = db.collection("matches").document(match_id)
+    match_doc = match_ref.get()
+    
+    if not match_doc.exists:
+        return False
+        
+    match_data = match_doc.to_dict()
+    if match_data.get("volunteer_id") != vol_id:
+        return False
+
+    batch = db.batch()
     batch.update(match_ref, {
         "status":                "in_progress",
         "work_status":           "working",
@@ -704,20 +712,24 @@ def start_work_session(match_id, vol_id):
         "updated_at":            firestore.SERVER_TIMESTAMP
     })
     
-    match_doc = match_ref.get()
-    if match_doc.exists:
-        need_id = match_doc.to_dict().get("need_id")
-        if need_id:
-            batch.update(db.collection("needs").document(need_id), {
-                "status":     "in_progress",
-                "updated_at": firestore.SERVER_TIMESTAMP
-            })
-    
+    need_id = match_data.get("need_id")
+    if need_id:
+        batch.update(db.collection("needs").document(need_id), {
+            "status":     "in_progress",
+            "updated_at": firestore.SERVER_TIMESTAMP
+        })
+        
     batch.commit()
-
+    return True
 
 def pause_work_session(match_id, vol_id, comment, duration_ms):
     """Pause a work session and log the duration."""
+    match_ref = db.collection("matches").document(match_id)
+    match_doc = match_ref.get()
+    
+    if not match_doc.exists:
+        return False
+        
     # 1. Add milestone to subcollection
     milestone = {
         "comment":    comment,
@@ -725,15 +737,16 @@ def pause_work_session(match_id, vol_id, comment, duration_ms):
         "timestamp":  firestore.SERVER_TIMESTAMP,
         "type":       "pause"
     }
-    db.collection("matches").document(match_id).collection("work_log").add(milestone)
+    match_ref.collection("work_log").add(milestone)
     
     # 2. Update match status
-    db.collection("matches").document(match_id).update({
-        "work_status":   "paused",
-        "total_work_ms": firestore.Increment(duration_ms),
-        "updated_at":    firestore.SERVER_TIMESTAMP
+    match_ref.update({
+        "work_status":           "paused",
+        "total_work_ms":         firestore.Increment(duration_ms),
+        "current_session_start": firestore.DELETE_FIELD,
+        "updated_at":            firestore.SERVER_TIMESTAMP
     })
-
+    return True
 
 def update_task_location(match_id, vol_id, lat, lng):
     """Update live location of a volunteer for a specific task."""
@@ -744,7 +757,7 @@ def update_task_location(match_id, vol_id, lat, lng):
             "updated_at": firestore.SERVER_TIMESTAMP
         }
     })
-
+    return True
 
 # ══════════════════════════════════════════════
 # HAVERSINE
