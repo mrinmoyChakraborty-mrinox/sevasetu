@@ -171,33 +171,13 @@ async function loadOlaMapsKey() {
 // ── Forward-geocode a location string via OlaMaps ───────────
 // Returns { city, lat, lng } or null
 async function geocodeText(text) {
-  if (!OLA_MAPS_API_KEY || !text.trim()) return null;
+  if (!text.trim()) return null;
   try {
-    const res  = await fetch(
-      `https://api.olamaps.io/places/v1/textsearch?input=${encodeURIComponent(text)}&api_key=${OLA_MAPS_API_KEY}`
-    );
+    const res  = await fetch(`/api/geocode?q=${encodeURIComponent(text)}`);
+    if (!res.ok) return null;
     const data = await res.json();
-    const results = data.results || [];
-    if (!results.length) return null;
-
-    const first = results[0];
-    const geo   = first.geometry?.location || {};
-    if (!geo.lat || !geo.lng) return null;
-
-    // Extract city name
-    const components = first.address_components || [];
-    let city = '';
-    for (const c of components) {
-      if ((c.types||[]).includes('locality')) { city = c.long_name; break; }
-    }
-    if (!city) {
-      for (const c of components) {
-        if ((c.types||[]).includes('administrative_area_level_2')) { city = c.long_name; break; }
-      }
-    }
-    if (!city) city = (first.formatted_address || text).split(',')[0].trim();
-
-    return { city, lat: geo.lat, lng: geo.lng };
+    if (data.lat == null || data.lng == null) return null;
+    return data;
   } catch {
     return null;
   }

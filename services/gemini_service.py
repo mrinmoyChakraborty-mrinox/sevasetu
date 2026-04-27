@@ -256,3 +256,13 @@ def _to_int(val):
         return int(val) if val is not None else None
     except (TypeError, ValueError):
         return None
+
+    logger.info(f"[Gemini] Extracted {len(sanitized)} needs.")
+    return sanitized
+
+
+def _to_int(val):
+    try:
+        return int(val) if val is not None else None
+    except (TypeError, ValueError):
+        return None

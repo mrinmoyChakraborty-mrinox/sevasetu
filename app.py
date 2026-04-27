@@ -1836,4 +1836,43 @@ def api_ngo_report_action():
         need_ref.update({"status": "in_progress"})
         # Add a note maybe?
         
+    return jsonify({"success": True})")
+    vol_profile = firebase_services.get_volunteer_profile(vol_id) if vol_id else {}
+    
+    return render_template("ngo_review_report.html", 
+                           need=need, 
+                           report=report, 
+                           volunteer=vol_profile,
+                           user=session["user"])
+
+@app.route("/api/ngo/report/action", methods=["POST"])
+def api_ngo_report_action():
+    """Approve or Reject/Request Changes on a report."""
+    if not session.get("user"):
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    data = request.json
+    need_id = data.get("need_id")
+    action = data.get("action") # 'approve' or 'reject'
+    
+    if not need_id or not action:
+        return jsonify({"error": "Missing data"}), 400
+        
+    db = firebase_services.get_db()
+    need_ref = db.collection("needs").document(need_id)
+    need = need_ref.get().to_dict()
+    
+    if action == "approve":
+        need_ref.update({"status": "completed"})
+        # Update match
+        vol_id = need.get("completion_report", {}).get("volunteer_id")
+        if vol_id:
+            matches = db.collection("matches").where("need_id", "==", need_id).where("volunteer_id", "==", vol_id).limit(1).stream()
+            for doc in matches:
+                doc.reference.update({"status": "completed"})
+    else:
+        # Revert to in_progress or assigned if rejected
+        need_ref.update({"status": "in_progress"})
+        # Add a note maybe?
+        
     return jsonify({"success": True})
