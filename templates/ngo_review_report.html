@@ -32,6 +32,24 @@
         background: #f0f4f8;
         border-radius: 1rem;
     }
+    .star-rating {
+        display: flex;
+        flex-direction: row-reverse;
+        justify-content: flex-end;
+        gap: 0.5rem;
+    }
+    .star-rating input { display: none; }
+    .star-rating label {
+        cursor: pointer;
+        font-size: 2rem;
+        color: #d1d5db;
+        transition: color 0.2s;
+    }
+    .star-rating input:checked ~ label,
+    .star-rating label:hover,
+    .star-rating label:hover ~ label {
+        color: #fea619;
+    }
 </style>
 {% endblock %}
 
@@ -107,6 +125,30 @@
                 </div>
             </section>
             {% endif %}
+
+            <!-- Rating & Review Section -->
+            <section class="review-card" id="ratingSection">
+                <h2 class="section-label mb-8">Rate Volunteer Performance</h2>
+                <div class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-black text-on-surface mb-3">Overall Rating</label>
+                        <div class="star-rating">
+                            <input type="radio" name="rating" id="star5" value="5"><label for="star5" class="material-symbols-outlined">star</label>
+                            <input type="radio" name="rating" id="star4" value="4"><label for="star4" class="material-symbols-outlined">star</label>
+                            <input type="radio" name="rating" id="star3" value="3"><label for="star3" class="material-symbols-outlined">star</label>
+                            <input type="radio" name="rating" id="star2" value="2"><label for="star2" class="material-symbols-outlined">star</label>
+                            <input type="radio" name="rating" id="star1" value="1"><label for="star1" class="material-symbols-outlined">star</label>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-black text-on-surface mb-3">Written Review</label>
+                        <textarea id="writtenReview" rows="4" 
+                            class="w-full bg-surface-container-low border-emerald-50 rounded-2xl p-4 text-sm font-medium focus:ring-2 focus:ring-primary outline-none transition-all"
+                            placeholder="Share your feedback about the volunteer's work..."></textarea>
+                    </div>
+                </div>
+            </section>
         </div>
 
         <!-- Sidebar -->
@@ -162,13 +204,29 @@
 async function handleAction(action) {
     if (!confirm(`Are you sure you want to ${action} this report?`)) return;
     
+    let rating = null;
+    let review = null;
+
+    if (action === 'approve') {
+        const ratingInput = document.querySelector('input[name="rating"]:checked');
+        if (!ratingInput) {
+            alert("Please provide a rating before approving.");
+            document.getElementById('ratingSection').scrollIntoView({ behavior: 'smooth' });
+            return;
+        }
+        rating = parseInt(ratingInput.value);
+        review = document.getElementById('writtenReview').value.trim();
+    }
+
     try {
         const res = await fetch("/api/ngo/report/action", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 need_id: "{{ need.id }}",
-                action: action
+                action: action,
+                rating: rating,
+                review: review
             })
         });
         

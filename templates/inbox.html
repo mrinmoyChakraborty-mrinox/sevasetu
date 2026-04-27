@@ -1,92 +1,46 @@
-<!DOCTYPE html>
-<html class="light" lang="en">
-<head>
-    <meta charset="utf-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Inbox | SevaSetu</title>
+{% extends "base.html" %}
 
-    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+{% block title %}Inbox | SevaSetu{% endblock %}
 
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet"/>
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+{% block head %}
+<style>
+    .hide-scrollbar::-webkit-scrollbar { display: none; }
+    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        "primary": "#006c44",
-                        "surface": "#f8f9ff",
-                        "on-surface": "#121c2a",
-                        "outline": "#6e7a71",
-                    },
-                    fontFamily: { "sans": ["Plus Jakarta Sans"] },
-                },
-            },
-        }
-    </script>
+    /* Panel visibility on mobile vs desktop */
+    #leftPanel  { display: flex; }
+    #rightPanel { display: none; }
 
-    <style>
-        .hide-scrollbar::-webkit-scrollbar { display: none; }
-        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    @media (min-width: 768px) {
+        #leftPanel  { display: flex !important; }
+        #rightPanel { display: flex !important; }
+    }
 
-        /* Panel visibility on mobile vs desktop */
-        #leftPanel  { display: flex; }
-        #rightPanel { display: none; }
+    /* On mobile: when a conv is open, hide left and show right */
+    body.conv-open #leftPanel  { display: none; }
+    body.conv-open #rightPanel { display: flex; }
 
-        @media (min-width: 768px) {
-            #leftPanel  { display: flex !important; }
-            #rightPanel { display: flex !important; }
-        }
+    @media (min-width: 768px) {
+        body.conv-open #leftPanel  { display: flex !important; }
+        body.conv-open #rightPanel { display: flex !important; }
+    }
+    
+    /* Adjust height to fit between navbar and bottom of screen */
+    .inbox-container {
+        height: calc(100vh - 64px); /* 64px is base.html navbar height */
+    }
+</style>
+{% endblock %}
 
-        /* On mobile: when a conv is open, hide left and show right */
-        body.conv-open #leftPanel  { display: none; }
-        body.conv-open #rightPanel { display: flex; }
-
-        @media (min-width: 768px) {
-            body.conv-open #leftPanel  { display: flex !important; }
-            body.conv-open #rightPanel { display: flex !important; }
-        }
-    </style>
-</head>
-
-<body class="bg-surface text-on-surface antialiased overflow-hidden h-screen flex flex-col">
-
-<!-- ================= HEADER ================= -->
-<header class="flex justify-between items-center px-6 h-16 w-full bg-emerald-50/80 backdrop-blur-md shadow-sm z-30 flex-shrink-0">
-    <div class="flex items-center gap-4">
-        <!-- Back button shown on mobile when conv open -->
-        <button id="backBtn" class="md:hidden text-primary hidden" onclick="closeChatPanel()">
-            <span class="material-symbols-outlined">arrow_back</span>
-        </button>
-        <a href="/" class="flex items-center gap-2">
-            <img src="{{ url_for('static', filename='images/only_logo.png') }}" alt="Logo" class="h-10 w-auto">
-            <img src="{{ url_for('static', filename='images/text_logo.png') }}" alt="SevaSetu" class="h-8 w-auto">
-        </a>
-    </div>
-
-    <div class="flex items-center gap-4">
-        <div class="hidden sm:flex items-center bg-white/50 rounded-full px-4 py-1.5 border">
-            <span class="material-symbols-outlined text-outline mr-2">search</span>
-            <input id="searchConversations" class="bg-transparent text-sm w-48 outline-none" placeholder="Search..." type="text"/>
-        </div>
-        <img id="userProfileImage"
-             class="w-10 h-10 rounded-full border-2 border-primary cursor-pointer"
-             src="https://ui-avatars.com/api/?name=User&background=006c44&color=fff"/>
-    </div>
-</header>
-
-<!-- ================= MAIN ================= -->
-<main class="flex flex-1 overflow-hidden">
-
+{% block content %}
+<div class="inbox-container flex overflow-hidden">
     <!-- LEFT PANEL -->
     <section id="leftPanel" class="w-full md:w-[30%] bg-[#eff4ff] border-r flex-col flex-shrink-0">
-
         <div class="p-6 flex-shrink-0">
             <h2 class="text-2xl font-bold mb-4">Messages</h2>
             <div class="relative">
                 <input id="searchMessages"
-                       class="w-full pl-10 pr-4 py-3 bg-white rounded-2xl text-sm outline-none"
+                       class="w-full pl-10 pr-4 py-3 bg-white rounded-2xl text-sm outline-none border border-transparent focus:border-primary transition-all"
                        placeholder="Search conversations" type="text"/>
                 <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">search</span>
             </div>
@@ -102,19 +56,16 @@
                         <div class="h-3 bg-gray-200 rounded w-1/2"></div>
                     </div>
                 </div>
-                <div class="animate-pulse flex items-center gap-3 p-4">
-                    <div class="w-12 h-12 rounded-full bg-gray-200 flex-shrink-0"></div>
-                    <div class="flex-1 space-y-2">
-                        <div class="h-4 bg-gray-200 rounded w-1/2"></div>
-                        <div class="h-3 bg-gray-200 rounded w-1/3"></div>
-                    </div>
-                </div>
             </div>
         </div>
     </section>
 
     <!-- RIGHT PANEL -->
-    <section id="rightPanel" class="flex-1 bg-white flex-col">
+    <section id="rightPanel" class="flex-1 bg-white flex-col relative">
+        <!-- Back button for mobile -->
+        <button id="backBtn" class="md:hidden absolute top-4 left-4 z-10 text-primary hidden bg-white/80 backdrop-blur-sm p-2 rounded-full shadow-sm" onclick="closeChatPanel()">
+            <span class="material-symbols-outlined">arrow_back</span>
+        </button>
 
         <!-- Empty state (shown when no conv selected) -->
         <div id="emptyState" class="flex-1 flex flex-col items-center justify-center text-gray-400 h-full">
@@ -125,7 +76,6 @@
 
         <!-- Chat UI (hidden until conv selected) -->
         <div id="chatUI" class="flex-col flex-1 hidden h-full flex">
-
             <!-- HEADER -->
             <header class="h-16 flex justify-between items-center px-6 border-b flex-shrink-0">
                 <div class="flex items-center gap-4">
@@ -176,11 +126,12 @@
             </div>
         </div>
     </section>
+</div>
+{% endblock %}
 
-</main>
+{% block footer %}{% endblock %}
 
+{% block scripts %}
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 <script src="{{ url_for('static', filename='js/inbox.js') }}"></script>
-
-</body>
-</html>
+{% endblock %}

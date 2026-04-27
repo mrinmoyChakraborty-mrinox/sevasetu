@@ -2140,26 +2140,55 @@ def api_ngo_report_action():
     data = request.json
     need_id = data.get("need_id")
     action = data.get("action") # 'approve' or 'reject'
+    rating = data.get("rating") # 1-5
+    review = data.get("review") # text
     
     if not need_id or not action:
         return jsonify({"error": "Missing data"}), 400
         
     db = firebase_services.get_db()
     need_ref = db.collection("needs").document(need_id)
-    need = need_ref.get().to_dict()
+    need_snap = need_ref.get()
+    if not need_snap.exists:
+        return jsonify({"error": "Need not found"}), 404
+    need = need_snap.to_dict()
     
     if action == "approve":
-        need_ref.update({"status": "completed"})
+        update_data = {
+            "status": "completed",
+            "ngo_rating": rating,
+            "ngo_review": review
+        }
+        need_ref.update(update_data)
+        
         # Update match
-        vol_id = need.get("completion_report", {}).get("volunteer_id")
+        report = need.get("completion_report", {})
+        vol_id = report.get("volunteer_id")
         if vol_id:
             matches = db.collection("matches").where("need_id", "==", need_id).where("volunteer_id", "==", vol_id).limit(1).stream()
             for doc in matches:
                 doc.reference.update({"status": "completed"})
             
-            # Increment volunteer completed tasks count
+            # Update volunteer stats and rating
             vol_ref = db.collection("volunteers").document(vol_id)
-            vol_ref.update({"totalTasks": firebase_services.firestore.Increment(1)})
+            vol_snap = vol_ref.get()
+            if vol_snap.exists:
+                vol_data = vol_snap.to_dict()
+                current_total_tasks = vol_data.get("totalTasks", 0)
+                current_rating = vol_data.get("rating", 0)
+                
+                # Calculate new average rating
+                if rating:
+                    new_total_tasks = current_total_tasks + 1
+                    new_rating = ((current_rating * current_total_tasks) + rating) / new_total_tasks
+                    vol_ref.update({
+                        "totalTasks": new_total_tasks,
+                        "rating": round(new_rating, 2)
+                    })
+                else:
+                    vol_ref.update({"totalTasks": firebase_services.firestore.Increment(1)})
+                    
+        return jsonify({"success": True})
     else:
         # Revert to in_progress or assigned if rejected
         need_ref.update({"status": "in_progress"})

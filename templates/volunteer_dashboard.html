@@ -1,195 +1,62 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Volunteer Dashboard | SevaSetu</title>
+{% extends "base.html" %}
 
-  <!-- Google Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
-  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+{% block title %}Volunteer Dashboard | SevaSetu{% endblock %}
 
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            "primary": "#006c44", "primary-container": "#4caf7d",
-            "secondary": "#855300", "tertiary": "#a83639",
-            "surface": "#f8f9ff", "on-surface": "#121c2a",
-            "on-surface-variant": "#3e4942", "outline": "#6e7a71",
-          }
-        }
-      }
-    }
-  </script>
+{% block head %}
+<link rel="stylesheet" href="/static/css/volunteer_dashboard.css"/>
+<style>
+  /* ── Online/Offline toggle visual fix ── */
+  .toggle-track {
+    display: flex;
+    align-items: center;
+    width: 48px;
+    height: 26px;
+    border-radius: 999px;
+    background: #006c44;       /* green = online default */
+    padding: 3px;
+    cursor: pointer;
+    transition: background 0.25s ease;
+    justify-content: flex-end; /* thumb right = online */
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.15);
+  }
+  .toggle-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+    transition: all 0.25s ease;
+    flex-shrink: 0;
+  }
+  .status-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  .status-label {
+    font-size: .82rem;
+    font-weight: 700;
+    color: #006c44;
+    min-width: 46px;
+    transition: color 0.2s;
+  }
+</style>
+{% endblock %}
 
-  <!-- Our custom stylesheet-->
-  <link rel="stylesheet" href="/static/css/volunteer_dashboard.css"/>
-
-  <style>
-    /* ── Online/Offline toggle visual fix ── */
-    .toggle-track {
-      display: flex;
-      align-items: center;
-      width: 48px;
-      height: 26px;
-      border-radius: 999px;
-      background: #006c44;       /* green = online default */
-      padding: 3px;
-      cursor: pointer;
-      transition: background 0.25s ease;
-      justify-content: flex-end; /* thumb right = online */
-      box-shadow: inset 0 1px 3px rgba(0,0,0,0.15);
-    }
-    .toggle-thumb {
-      width: 20px;
-      height: 20px;
-      border-radius: 50%;
-      background: #ffffff;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.25);
-      transition: all 0.25s ease;
-      flex-shrink: 0;
-    }
-    .status-toggle {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-shrink: 0;
-    }
-    .status-label {
-      font-size: .82rem;
-      font-weight: 700;
-      color: #006c44;
-      min-width: 46px;
-      transition: color 0.2s;
-    }
-  </style>
-</head>
-<body>
+{% block content %}
 <div id="all-tasks-modal" class="modal-backdrop" onclick="closeOnBackdrop(event,'all-tasks-modal')">
   <div class="modal-box">
-
-    <!-- Sticky header -->
     <div class="modal-head">
       <span class="modal-title">All Available Tasks</span>
       <button class="modal-close-btn" id="close-tasks-modal" aria-label="Close">
         <span class="material-symbols-outlined">close</span>
       </button>
     </div>
-
     <div class="modal-body">
-      <p id="allTasksCount" style="font-size:.82rem;color:#6e7a71;margin-bottom:18px;">12 tasks available in your area today</p>
+      <p id="allTasksCount" style="font-size:.82rem;color:#6e7a71;margin-bottom:18px;">Loading available tasks...</p>
       <div id="allTasksBody">
-        <div class="task-card">
-            <div class="task-top">
-              <span class="urgency-chip uc-high"><span class="uc-dot"></span>High Urgency</span>
-              <span class="task-dist"><span class="material-symbols-outlined">distance</span>0.8 km</span>
-            </div>
-            <div class="task-name">Deliver Groceries to Senior Center</div>
-            <div class="task-org">Helping Hands Foundation · Koramangala, Block 4</div>
-            <div class="task-tags">
-              <span class="task-tag">Logistics</span>
-              <span class="task-tag">Driving</span>
-            </div>
-            <div class="task-actions">
-              <button class="btn-accept">Accept Task</button>
-              <button class="btn-decline">Decline</button>
-            </div>
-        </div>
-
-      <!-- Task 2 — Medium Urgency -->
-        <div class="task-card">
-          <div class="task-top">
-            <span class="urgency-chip uc-mid"><span class="uc-dot"></span>Medium Urgency</span>
-            <span class="task-dist"><span class="material-symbols-outlined">distance</span>2.4 km</span>
-          </div>
-          <div class="task-name">Teach Basic Computer Literacy</div>
-          <div class="task-org">Vidya Outreach · Indiranagar</div>
-          <div class="task-tags">
-            <span class="task-tag">Education</span>
-            <span class="task-tag">Tech</span>
-          </div>
-          <div class="task-actions">
-            <button class="btn-accept">Accept Task</button>
-            <button class="btn-decline">Decline</button>
-          </div>
-        </div>
-
-        <!-- Task 3 — Low Urgency -->
-        <div class="task-card">
-          <div class="task-top">
-            <span class="urgency-chip uc-low"><span class="uc-dot"></span>Low Urgency</span>
-            <span class="task-dist"><span class="material-symbols-outlined">distance</span>3.1 km</span>
-          </div>
-          <div class="task-name">Weekend Tree Planting Drive</div>
-          <div class="task-org">GreenCity Foundation · Whitefield</div>
-          <div class="task-tags">
-            <span class="task-tag">Environment</span>
-            <span class="task-tag">Community</span>
-          </div>
-          <div class="task-actions">
-            <button class="btn-accept">Accept Task</button>
-            <button class="btn-decline">Decline</button>
-          </div>
-        </div>
-
-        <!-- Task 4 -->
-        <div class="task-card">
-          <div class="task-top">
-            <span class="urgency-chip uc-high"><span class="uc-dot"></span>High Urgency</span>
-            <span class="task-dist"><span class="material-symbols-outlined">distance</span>1.2 km</span>
-          </div>
-          <div class="task-name">Emergency Medical Supply Distribution</div>
-          <div class="task-org">HealthFirst NGO · JP Nagar</div>
-          <div class="task-tags">
-            <span class="task-tag">Healthcare</span>
-            <span class="task-tag">Logistics</span>
-          </div>
-          <div class="task-actions">
-            <button class="btn-accept">Accept Task</button>
-            <button class="btn-decline">Decline</button>
-          </div>
-        </div>
-
-        <!-- Task 5 -->
-        <div class="task-card">
-          <div class="task-top">
-            <span class="urgency-chip uc-mid"><span class="uc-dot"></span>Medium Urgency</span>
-            <span class="task-dist"><span class="material-symbols-outlined">distance</span>4.5 km</span>
-          </div>
-          <div class="task-name">After-School Tutoring for Kids</div>
-          <div class="task-org">Shiksha Seva · BTM Layout</div>
-          <div class="task-tags">
-            <span class="task-tag">Education</span>
-            <span class="task-tag">Youth</span>
-          </div>
-          <div class="task-actions">
-            <button class="btn-accept">Accept Task</button>
-            <button class="btn-decline">Decline</button>
-          </div>
-        </div>
-
-        <!-- Task 6 -->
-        <div class="task-card">
-          <div class="task-top">
-            <span class="urgency-chip uc-low"><span class="uc-dot"></span>Low Urgency</span>
-            <span class="task-dist"><span class="material-symbols-outlined">distance</span>5.8 km</span>
-          </div>
-          <div class="task-name">Collect Donated Clothes from Residents</div>
-          <div class="task-org">Clothes for All · Rajajinagar</div>
-          <div class="task-tags">
-            <span class="task-tag">Collection</span>
-            <span class="task-tag">Driving</span>
-          </div>
-          <div class="task-actions">
-            <button class="btn-accept">Accept Task</button>
-            <button class="btn-decline">Decline</button>
-          </div>
-      </div>
-
+        <!-- Populated by JS -->
       </div>
     </div>
   </div>
@@ -197,16 +64,13 @@
 
 <div id="map-modal" class="modal-backdrop" onclick="closeOnBackdrop(event,'map-modal')">
   <div class="modal-box" style="max-width:700px;">
-
     <div class="modal-head">
       <span class="modal-title">Find Tasks Near You</span>
       <button class="modal-close-btn" id="close-map-modal" aria-label="Close">
         <span class="material-symbols-outlined">close</span>
       </button>
     </div>
-
     <div class="modal-body">
-      <!-- Search bar -->
       <div style="position:relative; margin-bottom:16px;">
         <span class="material-symbols-outlined" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#6e7a71; font-size:18px;">search</span>
         <input type="text" id="mapSearchInput" placeholder="Search for a location..." 
@@ -214,49 +78,30 @@
         <div id="mapSearchResults" style="position:absolute; top:100%; left:0; right:0; background:white; border-radius:12px; box-shadow:0 10px 25px rgba(0,0,0,0.1); border:1px solid #e6eeff; z-index:100; max-height:200px; overflow-y:auto; display:none; margin-top:4px;"></div>
       </div>
 
-      <!-- Location bar — updated dynamically -->
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;background:#f0faf5;padding:10px 14px;border-radius:10px;border:1px solid rgba(0,108,68,.1);">
         <span class="material-symbols-outlined" style="color:#006c44;font-size:18px;">my_location</span>
         <span style="font-size:.83rem;font-weight:600;color:#3e4942;">Currently viewing <strong id="mapModalLocation">Detecting…</strong></span>
         <span id="mapModalTaskCount" style="margin-left:auto;font-size:.72rem;font-weight:700;color:#006c44;background:rgba(0,108,68,.08);padding:3px 10px;border-radius:99px;">Loading…</span>
       </div>
 
-      <!-- Full map image with pins -->
       <div class="map-modal-img-wrap">
         <div id="fullMapContainer" style="width:100%;height:100%;border-radius:12px;"></div>
-
-        <!-- Task pins with tooltips via title attribute 
-        <div class="map-modal-pin mp-red"   style="top:22%;left:28%;" title="Deliver Groceries · 0.8km">
-          <span class="material-symbols-outlined">volunteer_activism</span>
-        </div>
-        <div class="map-modal-pin mp-green" style="bottom:28%;right:22%;" title="Tree Planting · 3.1km">
-          <span class="material-symbols-outlined">volunteer_activism</span>
-        </div>
-        <div class="map-modal-pin mp-amber" style="top:48%;left:55%;" title="Computer Literacy · 2.4km">
-          <span class="material-symbols-outlined">volunteer_activism</span>
-        </div>
-        <div class="map-modal-pin mp-blue" style="top:35%;right:38%;" title="Medical Supply · 1.2km">
-          <span class="material-symbols-outlined">volunteer_activism</span>
-        </div>-->
-
-        <!-- Zoom controls -->
         <div class="map-modal-controls">
           <button class="map-zoom-btn">+</button>
           <button class="map-zoom-btn">−</button>
         </div>
       </div>
 
-      <!-- Legend -->
       <div class="map-legend">
         <div class="legend-item"><div class="legend-dot" style="background:#a83639;"></div>High Urgency</div>
         <div class="legend-item"><div class="legend-dot" style="background:#855300;"></div>Medium Urgency</div>
         <div class="legend-item"><div class="legend-dot" style="background:#006c44;"></div>Low Urgency</div>
         <div class="legend-item"><div class="legend-dot" style="background:#0369a1;"></div>Healthcare</div>
       </div>
-
     </div>
   </div>
 </div>
+
 <div id="history-modal" class="modal-backdrop" onclick="closeOnBackdrop(event,'history-modal')">
   <div class="modal-box">
     <div class="modal-head">
@@ -312,83 +157,25 @@
     </div>
   </div>
 </div>
-<header class="site-header">
-  <div class="header-inner">
 
-    <!-- Logo -->
-    <a href="#" class="logo-wrap">
-      <div class="logo-icon">
-        <span class="material-symbols-outlined">volunteer_activism</span>
-      </div>
-      <span class="logo-text">SevaSetu</span>
-    </a>
-
-    <!-- Page title (desktop only) -->
-    <span style="font-size:1rem;font-weight:700;color:#064e35;display:none;" class="md-only-title">Volunteer Dashboard</span>
-
-    <!-- Right: chat + notification + avatar + hamburger -->
-    <div class="header-right">
-      <!-- Chat inbox — always visible -->
-      <a href="/inbox" id="topbar-chat-btn"
-         class="icon-btn" aria-label="Chat inbox"
-         title="Chat inbox" style="display:none">
-        <span class="material-symbols-outlined">chat</span>
-      </a>
-      <!-- Bell — shown only when notifications not yet enabled -->
-      <button id="topbar-bell-btn" class="icon-btn" aria-label="Notifications" style="display:none">
-        <span class="material-symbols-outlined">notifications</span>
-      </button>
-      <!-- Avatar — lazy-loaded -->
-      <div class="avatar-btn" style="overflow:hidden;display:flex;align-items:center;justify-content:center;background:#e6eeff;">
-        <img id="topbar-avatar" src="" alt="Profile" style="width:100%;height:100%;object-fit:cover;"/>
-        <span id="topbar-avatar-fallback"
-              style="display:none;align-items:center;justify-content:center;width:100%;height:100%;font-weight:700;color:#006c44;font-size:1rem;">
-        </span>
-      </div>
-      <!-- Hamburger + dropdown -->
-      <div class="menu-wrap">
-        <button class="icon-btn menu-btn" aria-label="Menu">
-          <span class="material-symbols-outlined">menu</span>
-        </button>
-        <div id="nav-dd">
-          <a href="/"><span class="material-symbols-outlined">home</span>Home</a>
-          <a href=""><span class="material-symbols-outlined">explore</span>Discover</a>
-          <a href="/volunteer/dashboard" class="act"><span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1">dashboard</span>Dashboard</a>
-          <a href="/volunteer/matches"><span class="material-symbols-outlined">volunteer_activism</span>Matches</a>
-          <hr/>
-          <a href="/volunteer/settings"><span class="material-symbols-outlined">settings</span>Settings</a>
-          <a href="/logout"><span class="material-symbols-outlined">logout</span>Logout</a>
-        </div>
-      </div>
-    </div>
-
-  </div>
-</header>
-
-
-
-<!-- ══════════════════════════════════════════════════════════
-     MAIN PAGE CONTENT
-══════════════════════════════════════════════════════════ -->
-<main>
-  <div class="page-body">
-
+<main class="page-body">
+  <div class="max-w-7xl mx-auto px-6 py-10 space-y-10">
 
     <!-- ── WELCOME BAR ──────────────────────────────────── -->
-    <section class="welcome-bar fu fu-1">
-      <div style="display:flex; align-items:center; gap:12px; flex:1;">
+    <section class="welcome-bar bg-white p-6 rounded-2xl shadow-sm border border-primary/5 flex flex-wrap items-center justify-between gap-6" data-aos="fade-up">
+      <div class="flex items-center gap-4 flex-1">
         <div>
-          <h2 id="welcomeHeading"></h2>
-          <p id="welcomeSub" style="color:#6e7a71;font-size:.88rem;margin-top:4px;"></p>
+          <h2 id="welcomeHeading" class="text-2xl md:text-3xl font-extrabold text-on-surface tracking-tight"></h2>
+          <p id="welcomeSub" class="text-on-surface-variant mt-1 text-sm md:text-base"></p>
         </div>
         <button onclick="openModal('relocate-modal')" 
-                style="margin-left:auto; background:white; border:1px solid #bdcabf; color:#3e4942; padding:8px 16px; border-radius:99px; font-size:0.75rem; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:6px; transition:all 0.2s;">
-          <span class="material-symbols-outlined" style="font-size:16px; color:#006c44;">location_on</span>
+                class="bg-white border border-outline-variant text-on-surface-variant px-5 py-2.5 rounded-full text-sm font-bold shadow-sm hover:shadow-md transition-all flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary" style="font-size:18px">location_on</span>
           Relocate
         </button>
       </div>
       <!-- Online / Offline toggle -->
-      <div class="status-toggle">
+      <div class="status-toggle bg-surface-container-low px-4 py-2 rounded-full border border-outline-variant/30">
         <span class="status-label">Online</span>
         <div class="toggle-track" title="Toggle availability">
           <div class="toggle-thumb"></div>
@@ -396,160 +183,94 @@
       </div>
     </section>
 
-
     <!-- ── STATS ROW ─────────────────────────────────────── -->
-    <section class="stats-grid fu fu-2">
-
+    <section class="grid grid-cols-1 sm:grid-cols-3 gap-6" data-aos="fade-up" data-aos-delay="100">
       <!-- Tasks Matched -->
-      <div class="stat-card">
-        <div class="stat-icon si-green">
-          <span class="material-symbols-outlined">task_alt</span>
+      <div class="bg-white p-6 rounded-2xl shadow-sm border border-primary/5 flex items-center gap-4 hover:translate-y-[-4px] transition-transform">
+        <div class="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
+          <span class="material-symbols-outlined text-2xl">task_alt</span>
         </div>
         <div>
-          <div class="stat-label">Tasks Matched</div>
-          <div class="stat-num" id="statMatched"></div>
+          <div class="text-on-surface-variant text-xs font-bold uppercase tracking-widest">Tasks Matched</div>
+          <div class="text-3xl font-extrabold text-on-surface" id="statMatched">0</div>
         </div>
       </div>
 
       <!-- Completed -->
-      <div class="stat-card" style="cursor:pointer;" onclick="openModal('history-modal')">
-        <div class="stat-icon si-amber">
-          <span class="material-symbols-outlined">volunteer_activism</span>
+      <div class="bg-white p-6 rounded-2xl shadow-sm border border-primary/5 flex items-center gap-4 cursor-pointer hover:translate-y-[-4px] transition-transform" onclick="openModal('history-modal')">
+        <div class="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center text-amber-700">
+          <span class="material-symbols-outlined text-2xl">volunteer_activism</span>
         </div>
         <div>
-          <div class="stat-label">Completed</div>
-          <div class="stat-num" id="statCompleted"></div>
+          <div class="text-on-surface-variant text-xs font-bold uppercase tracking-widest">Completed</div>
+          <div class="text-3xl font-extrabold text-on-surface" id="statCompleted">0</div>
         </div>
       </div>
 
       <!-- Rating -->
-      <div class="stat-card">
-        <div class="stat-icon si-red">
-          <span class="material-symbols-outlined">star</span>
+      <div class="bg-white p-6 rounded-2xl shadow-sm border border-primary/5 flex items-center gap-4 hover:translate-y-[-4px] transition-transform">
+        <div class="w-12 h-12 bg-rose-100 rounded-xl flex items-center justify-center text-rose-600">
+          <span class="material-symbols-outlined text-2xl">star</span>
         </div>
         <div>
-          <div class="stat-label">Your Rating</div>
-          <div class="stat-num" id="statRating"></div>
+          <div class="text-on-surface-variant text-xs font-bold uppercase tracking-widest">Your Rating</div>
+          <div class="text-3xl font-extrabold text-on-surface" id="statRating">0.0</div>
         </div>
       </div>
-
     </section>
 
-
     <!-- ── MAIN DASHBOARD GRID ─────────────────────────── -->
-    <div class="dash-grid fu fu-3">
-
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
 
       <!-- ────── LEFT: TASKS FOR YOU ────── -->
-      <div class="left-col">
-
-        <div class="section-head">
-          <span class="section-title">Tasks For You</span>
-          <!-- "View All" opens the all-tasks modal -->
-          <button class="view-all-btn" id="view-all-btn">View All</button>
+      <div class="lg:col-span-7 space-y-6" data-aos="fade-right">
+        <div class="flex justify-between items-center">
+          <h3 class="text-xl font-bold text-on-surface tracking-tight">Tasks For You</h3>
+          <button class="text-primary font-bold text-sm hover:underline" id="view-all-btn">View All</button>
         </div>
-
-        <div class="task-stack" id="tasksForYou">
-          <!-- populated by volunteer_dashboard.js after API load -->
+        <div class="space-y-4" id="tasksForYou">
+          <!-- Populated by JS -->
         </div>
       </div>
 
-
       <!-- ────── RIGHT: MAP ────── -->
-      <div class="right-col">
-
-        <div class="section-head">
-          <span class="section-title">Needs Near You</span>
-        </div>
-
-        <div class="map-card">
-
-          <!-- Mini map image -->
-          <div class="map-img-wrap">
-            <div id="miniMap" style="width:100%;height:100%;border-radius:12px;"></div>
+      <div class="lg:col-span-5 space-y-6" data-aos="fade-left">
+        <h3 class="text-xl font-bold text-on-surface tracking-tight">Needs Near You</h3>
+        <div class="bg-white rounded-2xl shadow-lg border border-primary/5 overflow-hidden">
+          <div class="h-[300px] w-full">
+            <div id="miniMap" style="width:100%;height:100%;"></div>
           </div>
-
-          <!-- Footer: location + Find Task button -->
-          <div class="map-foot">
-            <div class="map-location">
-              <span class="material-symbols-outlined">my_location</span>
+          <div class="p-5 flex items-center justify-between bg-surface-container-low">
+            <div class="flex items-center gap-2 text-on-surface-variant text-sm font-medium">
+              <span class="material-symbols-outlined text-primary text-lg">my_location</span>
               <span id="currentLocation">Detecting location...</span>
             </div>
-            <!-- "Find Task" opens the full map modal -->
-            <button class="find-task-btn" id="find-task-btn">
-              <span class="material-symbols-outlined">map</span>
+            <button class="bg-primary text-white px-5 py-2.5 rounded-full text-sm font-bold shadow-md hover:shadow-lg transition-all flex items-center gap-2" id="find-task-btn">
+              <span class="material-symbols-outlined text-sm">map</span>
               Find Task
             </button>
           </div>
-
         </div>
       </div>
 
-
     </div>
-    <!-- END DASHBOARD GRID -->
-
 
     <!-- ── MY ACCEPTED TASKS ─────────────────────────────── -->
-    <section class="fu fu-4">
-      <div class="section-head" style="margin-bottom:16px;">
-        <span class="section-title">My Accepted Tasks</span>
-      </div>
-
-      <div class="accepted-grid" id="acceptedTasksGrid">
-        <!-- populated by volunteer_dashboard.js after API load -->
+    <section class="space-y-6" data-aos="fade-up">
+      <h3 class="text-xl font-bold text-on-surface tracking-tight">My Accepted Tasks</h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="acceptedTasksGrid">
+        <!-- Populated by JS -->
       </div>
     </section>
 
-
   </div>
 </main>
+{% endblock %}
 
-
-<!-- ══════════════════════════════════════════════════════════
-     FOOTER
-══════════════════════════════════════════════════════════ -->
-<footer class="site-footer fu fu-5">
-  <div class="footer-inner">
-    <div>
-      <div class="footer-logo">SevaSetu</div>
-      <div class="footer-copy">© 2026 SevaSetu · Elevated Neighborliness.</div>
-    </div>
-    <div class="footer-links">
-      <a href="#">Privacy Policy</a>
-      <a href="#">Terms of Service</a>
-      <a href="#">Contact Us</a>
-    </div>
-  </div>
-</footer>
-
-
-<!-- ══════════════════════════════════════════════════════════
-     MOBILE BOTTOM NAVIGATION
-══════════════════════════════════════════════════════════ -->
-<nav class="mob-nav">
-  <a href="/" class="mob-nav-item">
-    <span class="material-symbols-outlined">home</span>Home
-  </a>
-  <a href="#" class="mob-nav-item">
-    <span class="material-symbols-outlined">explore</span>Discover
-  </a>
-  <a href="/volunteer/dashboard" class="mob-nav-item active">
-    <span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1">dashboard</span>Dashboard
-  </a>
-  <a href="#" class="mob-nav-item">
-    <span class="material-symbols-outlined">volunteer_activism</span>Requests
-  </a>
-</nav>
-
-
-<!-- JavaScript — loaded last so all DOM elements exist -->
+{% block scripts %}
 <!-- Ola Maps SDK -->
 <script src="https://www.unpkg.com/olamaps-web-sdk@latest/dist/olamaps-web-sdk.umd.js"> </script>
-<!-- Shared top bar behaviour (lazy avatar, bell, chat) -->
-<script src="{{ url_for('static', filename='js/topbar.js') }}"></script>
 <!-- Volunteer Dashboard JS -->
-  <script src="{{ url_for('static', filename='js/sync_manager.js') }}"></script>
-  <script src="{{ url_for('static', filename='js/volunteer_dashboard.js') }}"></script>
-</body>
-</html>
+<script src="{{ url_for('static', filename='js/sync_manager.js') }}"></script>
+<script src="{{ url_for('static', filename='js/volunteer_dashboard.js') }}"></script>
+{% endblock %}
