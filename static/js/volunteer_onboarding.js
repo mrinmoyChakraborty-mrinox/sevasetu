@@ -11,15 +11,13 @@ async function loadOlaMapsKey() {
   try {
     const res = await fetch("/api/get_ola_maps_key");
     if (!res.ok) throw new Error("Failed to fetch key");
-
     const data = await res.json();
     OLA_MAPS_API_KEY = data.OLA_MAPS_API_KEY;
-
   } catch (err) {
     console.error("Error loading Ola Maps key:", err);
   }
 }
-await loadOlaMapsKey();
+
 // ─────────────────────────────────────────────
 // DOM REFERENCES
 // ─────────────────────────────────────────────
@@ -37,7 +35,7 @@ const submitBtn        = document.getElementById("submitBtn");
 // Location state
 let selectedLat = 12.9716;  // Default: Bengaluru
 let selectedLng = 77.5946;
-let mapInstance  = null;
+let mapInstance   = null;
 let markerInstance = null;
 
 // ─────────────────────────────────────────────
@@ -147,6 +145,11 @@ function initMap() {
   const mapEl = document.getElementById("locationMap");
   if (!mapEl || typeof OlaMaps === "undefined") return;
 
+  if (!OLA_MAPS_API_KEY) {
+    mapEl.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#6e7a71;font-size:.85rem;">Map unavailable — location key not loaded</div>`;
+    return;
+  }
+
   const olaMaps = new OlaMaps({ apiKey: OLA_MAPS_API_KEY });
 
   mapInstance = olaMaps.init({
@@ -193,6 +196,7 @@ function updateLocation(lat, lng) {
 }
 
 async function reverseGeocode(lat, lng) {
+  if (!OLA_MAPS_API_KEY) return;
   try {
     const res  = await fetch(
       `https://api.olamaps.io/places/v1/reverse-geocode?latlng=${lat},${lng}&api_key=${OLA_MAPS_API_KEY}`
@@ -212,7 +216,9 @@ async function reverseGeocode(lat, lng) {
           : `📍 ${results[0].formatted_address?.split(",")[0] || "Location selected"}`;
       }
     }
-  } catch {}
+  } catch (err) {
+    console.error("Reverse geocoding error:", err);
+  }
 }
 
 // "Use current location" button
@@ -239,12 +245,6 @@ document.getElementById("useMyLocationBtn")?.addEventListener("click", () => {
     },
     { timeout: 8000 }
   );
-});
-
-// Init map on DOM ready
-document.addEventListener("DOMContentLoaded", () => {
-  initMap();
-  restoreDraft();
 });
 
 
@@ -367,7 +367,18 @@ function restoreDraft() {
 
 
 // ─────────────────────────────────────────────
-// 8. UI HELPERS
+// 8. BOOT — load key first, then init map
+// ─────────────────────────────────────────────
+
+document.addEventListener("DOMContentLoaded", async () => {
+  await loadOlaMapsKey();
+  initMap();
+  restoreDraft();
+});
+
+
+// ─────────────────────────────────────────────
+// 9. UI HELPERS
 // ─────────────────────────────────────────────
 
 function setLoading(loading) {
@@ -380,7 +391,7 @@ function showError(msg) {
   const el = document.getElementById("formError");
   if (!el) { alert(msg); return; }
   el.textContent = msg;
-  el.style.display = "block";
+  el.style.display    = "block";
   el.style.background = "#fee2e2";
   el.style.color      = "#991b1b";
   el.style.borderRadius = "10px";
