@@ -269,6 +269,7 @@
     }
     .tracker-log-item .log-time { font-size:.68rem;color:#6e7a71;margin-top:2px; }
   </style>
+  <script src="https://www.unpkg.com/olamaps-web-sdk@latest/dist/olamaps-web-sdk.umd.js"></script>
 </head>
 <body>
 
@@ -812,28 +813,26 @@
 
 
     // ── toggle start / pause ─────────────────────────
+    // ── toggle start / pause ─────────────────────────
     async function toggleWorkSession() {
       const btn   = document.getElementById("trackerToggleBtn");
-      const icon  = document.getElementById("trackerBtnIcon");
-      const label = document.getElementById("trackerBtnLabel");
-      btn.disabled = true;
-
-      // Failsafe: If global variable is still missing, fetch it dynamically
+      
+      // Failsafe: Fetch MATCH_ID dynamically if missing
       if (!MATCH_ID) {
           try {
               const mRes = await fetch(`/api/volunteer/match-for-need/${NEED_ID}`);
               const mData = await mRes.json();
               if (mData.match_id) MATCH_ID = mData.match_id;
-          } catch(e) { 
-              console.warn("Could not fetch match context dynamically"); 
-          }
+          } catch(e) { }
       }
 
       if (!MATCH_ID) {
           showToast("Task context missing. Please refresh.", "error");
-          btn.disabled = false;
           return;
       }
+
+      // Temporarily disable button to prevent spam clicks
+      btn.disabled = true;
 
       if (!_isRunning) {
         // --- START ---
@@ -843,42 +842,34 @@
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ task_id: MATCH_ID }) 
           });
-          if (!res.ok) throw new Error(await res.text());
+          if (!res.ok) throw new Error("Server error");
+          
+          _sessionStartEpoch = Date.now();
+          _startTimer(true); 
+          showToast("Work session started ✅", "success");
         } catch (err) {
-          showToast("Could not start session: " + err.message, "error");
-          btn.disabled = false;
-          return;
+          showToast("Could not start session", "error");
         }
-        
-        _sessionStartEpoch = Date.now();
-        _startTimer(true); // true = brand new session
-        showToast("Work session started ✅", "success");
-
       } else {
         // --- PAUSE ---
-        // Calculate ONLY the duration of this specific continuous session
         const sessionDurationMs = Date.now() - _sessionStartEpoch;
-
         try {
           const res = await fetch("/api/volunteer/work/pause", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ task_id: MATCH_ID, duration_ms: sessionDurationMs, comment: "Paused via tracker" }) 
           });
-          if (!res.ok) throw new Error(await res.text());
+          if (!res.ok) throw new Error("Server error");
+          
+          _pauseTimer();
+          showToast("Session paused", "success");
         } catch (err) {
-          showToast("Could not pause session: " + err.message, "error");
-          btn.disabled = false;
-          return;
+          showToast("Could not pause session", "error");
         }
-        
-        _pauseTimer();
-        showToast("Session paused", "success");
       }
 
       btn.disabled = false;
     }
-
     
 // ── milestone log ────────────────────────────────
     async function logMilestone() {
