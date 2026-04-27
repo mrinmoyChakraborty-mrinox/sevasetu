@@ -85,6 +85,9 @@ let lastForegroundNotificationAt = 0;
         await _requestAndSaveFcmToken(bellBtn, true);
     });
 
+    // ── 4. Firestore Real-time Notifications ────────────────────
+    _setupFirestoreNotificationListener(topbarData.uid);
+
 })();
 
 function _setupServiceWorkerMessageHandler() {
@@ -296,9 +299,101 @@ function _showForegroundNotification(payload) {
     lastForegroundNotificationKey = notificationKey;
     lastForegroundNotificationAt = now;
 
-    // Show as an in-app toast (browser Notification API requires a gesture on some browsers
-    // when the page is already focused, so we use our own toast instead)
+    // Show as an in-app toast
     _showTopbarToast(`${title}: ${body}`, clickUrl);
+}
+
+// ────────────────────────────────────────────────────────────────
+// Internal: Real-time Firestore Notification Listener
+// ────────────────────────────────────────────────────────────────
+async function _setupFirestoreNotificationListener(uid) {
+    if (!uid) return;
+
+    try {
+        const { firebaseConfig } = await _getFirebaseConfig();
+        if (!firebaseConfig) return;
+
+        const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js');
+        const { getFirestore, collection, query, where, onSnapshot, orderBy, limit } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+
+        let app;
+        if (getApps().length === 0) {
+            app = initializeApp(firebaseConfig);
+        } else {
+            app = getApps()[0];
+        }
+
+        const db = getFirestore(app);
+        const q = query(
+            collection(db, "notifications"),
+            where("recipient_id", "==", uid),
+            where("read", "==", false),
+            orderBy("created_at", "desc"),
+            limit(5)
+        );
+
+        let initialLoad = true;
+        onSnapshot(q, (snapshot) => {
+            if (initialLoad) {
+                initialLoad = false;
+                // Update bell icon badge if we have unread count
+                _updateNotificationBadge(snapshot.size);
+                return;
+            }
+
+            snapshot.docChanges().forEach((change) => {
+                if (change.type === "added") {
+                    const data = change.doc.data();
+                    _showFirestoreNotification(data);
+                }
+            });
+            _updateNotificationBadge(snapshot.size);
+        });
+
+    } catch (err) {
+        console.warn('[topbar] Firestore notification listener failed:', err);
+    }
+}
+
+function _showFirestoreNotification(data) {
+    const title = data.title || "New Notification";
+    const body = data.message || "";
+    const type = data.type || "info"; // success, warning, error, info
+    
+    // Sound effect
+    try {
+        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+        audio.volume = 0.4;
+        audio.play();
+    } catch {}
+
+    window.showToast(body, type, 8000);
+}
+
+function _updateNotificationBadge(count) {
+    const bellBtn = document.getElementById('topbar-bell-btn');
+    if (!bellBtn) return;
+
+    let badge = bellBtn.querySelector('.notification-badge');
+    if (count > 0) {
+        if (!badge) {
+            badge = document.createElement('span');
+            badge.className = 'notification-badge';
+            badge.style.cssText = `
+                position: absolute; top: -2px; right: -2px;
+                width: 18px; height: 18px; border-radius: 50%;
+                background: #ba1a1a; color: white;
+                font-size: 10px; font-weight: 800;
+                display: flex; align-items: center; justify-content: center;
+                border: 2px solid white;
+            `;
+            bellBtn.style.position = 'relative';
+            bellBtn.appendChild(badge);
+        }
+        badge.textContent = count > 9 ? '9+' : count;
+    } else if (badge) {
+        badge.remove();
+    }
 }
 
 // ────────────────────────────────────────────────────────────────
