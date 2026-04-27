@@ -775,15 +775,16 @@
       return `${h}:${m}:${sc}`;
     }
 
-    // ── init tracker on DOM ready (Firebase Source of Truth) ──
+   // ── init tracker on DOM ready (Firebase Source of Truth) ──
     function initTracker() {
-      // Note: `NEED_ID` is defined globally in the template. 
-      // We will fetch the latest state from the API.
       fetch(`/api/need/${NEED_ID}`)
         .then(res => res.json())
         .then(data => {
             const need = data.need;
             if (!need) return;
+
+            // Failsafe: Guarantee MATCH_ID is set from the DB response
+            if (need.match_id) MATCH_ID = need.match_id;
 
             // 1. Base accumulated time from Firebase
             let totalMs = need.total_work_ms || 0;
@@ -809,12 +810,24 @@
         .catch(err => console.error("Error initializing tracker:", err));
     }
 
+
     // ── toggle start / pause ─────────────────────────
     async function toggleWorkSession() {
       const btn   = document.getElementById("trackerToggleBtn");
       const icon  = document.getElementById("trackerBtnIcon");
       const label = document.getElementById("trackerBtnLabel");
       btn.disabled = true;
+
+      // Failsafe: If global variable is still missing, fetch it dynamically
+      if (!MATCH_ID) {
+          try {
+              const mRes = await fetch(`/api/volunteer/match-for-need/${NEED_ID}`);
+              const mData = await mRes.json();
+              if (mData.match_id) MATCH_ID = mData.match_id;
+          } catch(e) { 
+              console.warn("Could not fetch match context dynamically"); 
+          }
+      }
 
       if (!MATCH_ID) {
           showToast("Task context missing. Please refresh.", "error");
@@ -866,62 +879,21 @@
       btn.disabled = false;
     }
 
-    function _startTimer(isNewSession) {
-      _isRunning = true;
-      document.getElementById("trackerClock").classList.add("running");
-      
-      const btn = document.getElementById("trackerToggleBtn");
-      const icon = document.getElementById("trackerBtnIcon");
-      const label = document.getElementById("trackerBtnLabel");
-      
-      // Setup UI to "Pause" state
-      if (btn) {
-          icon.textContent = "pause";
-          label.textContent = "Pause Work";
-          btn.classList.add("pausing");
-          document.getElementById("trackerStatus").textContent = "Session active";
-          document.getElementById("trackerMilestoneWrap").style.display = "block";
-          document.getElementById("trackerLocation").style.display = "flex";
-      }
-
-      _startLocationSync();
-
-      _timerInterval = setInterval(() => {
-        _elapsedSeconds++;
-        _updateClockUI();
-      }, 1000);
-    }
-
-    function _pauseTimer() {
-      _isRunning = false;
-      clearInterval(_timerInterval);
-      _timerInterval = null;
-      document.getElementById("trackerClock").classList.remove("running");
-
-      const btn = document.getElementById("trackerToggleBtn");
-      const icon = document.getElementById("trackerBtnIcon");
-      const label = document.getElementById("trackerBtnLabel");
-
-      if (btn) {
-          icon.textContent  = "play_arrow";
-          label.textContent = "Resume Work";
-          btn.classList.remove("pausing");
-          document.getElementById("trackerStatus").textContent = "Paused";
-      }
-
-      _stopLocationSync();
-    }
-
-    function _updateClockUI() {
-      const el = document.getElementById("trackerClock");
-      if (el) el.textContent = _fmt(_elapsedSeconds);
-    }
-
-    // ── milestone log ────────────────────────────────
+    
+// ── milestone log ────────────────────────────────
     async function logMilestone() {
       const input = document.getElementById("milestoneInput");
       const comment = input?.value.trim();
       if (!comment) { showToast("Please enter a milestone comment.", "error"); return; }
+      
+      // Failsafe
+      if (!MATCH_ID) {
+          try {
+              const mRes = await fetch(`/api/volunteer/match-for-need/${NEED_ID}`);
+              const mData = await mRes.json();
+              if (mData.match_id) MATCH_ID = mData.match_id;
+          } catch(e) {}
+      }
       if (!MATCH_ID) return;
 
       try {
@@ -943,25 +915,17 @@
     }
 
     // ── live location sync ───────────────────────────
-    function _startLocationSync() {
-      if (!navigator.geolocation) return;
-      _locationWatchId = navigator.geolocation.watchPosition(
-        (pos) => syncLocation(pos.coords.latitude, pos.coords.longitude),
-        (err) => console.warn("Geo error:", err),
-        { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 }
-      );
-      _flushLocationQueue();
-    }
-
-    function _stopLocationSync() {
-      if (_locationWatchId !== null) {
-        navigator.geolocation.clearWatch(_locationWatchId);
-        _locationWatchId = null;
-      }
-    }
-
     async function syncLocation(lat, lng) {
+      // Failsafe
+      if (!MATCH_ID) {
+          try {
+              const mRes = await fetch(`/api/volunteer/match-for-need/${NEED_ID}`);
+              const mData = await mRes.json();
+              if (mData.match_id) MATCH_ID = mData.match_id;
+          } catch(e) {}
+      }
       if (!MATCH_ID) return;
+
       if (_lastLat !== null && _haversine(_lastLat, _lastLng, lat, lng) < LOC_THRESHOLD_KM) return;
 
       _lastLat = lat; _lastLng = lng;
@@ -998,7 +962,6 @@
         } catch { break; }
       }
     }
-
     // ── NGO Live Tracking Map ────────────────────────
     let _ngoMapInstance = null;
     let _ngoMarkerInstance = null;
