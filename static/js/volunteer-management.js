@@ -164,7 +164,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 <div class="flex items-start justify-between">
                     <div class="flex gap-4">
                         <div class="relative">
-                            <img src="${vol.image || '/static/images/avatar.png'}" 
+                            <img src="${vol.photo || '/static/images/avatar.png'}" 
                                  onerror="this.src='/static/images/avatar.png'"
                                  class="w-14 h-14 rounded-2xl object-cover shadow-sm group-hover:scale-105 transition-transform"/>
                             <div class="absolute -bottom-1 -right-1 w-4 h-4 ${vol.status === 'Active' ? 'bg-green-500' : 'bg-amber-500'} border-2 border-white rounded-full"></div>
@@ -312,7 +312,7 @@ function updatePendingCount(data) {
         document.getElementById("volPhone").textContent = vol.phone || "Not provided";
         document.getElementById("volCity").textContent = vol.city || "N/A";
         document.getElementById("volJoined").textContent = vol.joined || "N/A";
-        document.getElementById("volImage").src = vol.image || "/static/images/avatar.png";
+        document.getElementById("volImage").src = vol.photo || "/static/images/avatar.png";
 
         const skillsContainer = document.getElementById("volSkills");
         const skills = Array.isArray(vol.skills) ? vol.skills : [];

@@ -109,13 +109,21 @@ document.addEventListener("DOMContentLoaded", () => {
             // ── FIX: API returns org_name / contact_email / logo_url ──
             // Normalise each record so the rest of the code uses consistent keys
             ngosData = data.map(ngo => ({
-                ...ngo,
-                // prefer normalised keys; fall back to raw API keys
-                name  : ngo.org_name      || ngo.name  || "Unnamed NGO",
-                email : ngo.contact_email || ngo.email || "—",
-                logo  : ngo.logo_url      || ngo.logo  || "",
+                        ...ngo,
+                        name  : ngo.org_name || "Unnamed NGO",
+                        email : ngo.contact_email || "—",
+                        logo  : ngo.logo_url || "",
+                        
+                        // 🔥 FIX LOCATION
+                        city: ngo.location?.city || "N/A",
+                        
+                        // 🔥 FIX STATUS (YOU DIDN’T STORE IT)
+                        status: ngo.verified === true ? "Verified" : "Pending",
+                        
+                        joined: ngo.createdAt
+                            ? new Date(ngo.createdAt._seconds * 1000).toLocaleDateString()
+                            : "—"
             }));
-
             renderNGOs(ngosData);
 
         } catch (err) {

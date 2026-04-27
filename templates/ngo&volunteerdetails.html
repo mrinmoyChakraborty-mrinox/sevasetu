@@ -443,6 +443,9 @@
     const NEED_STATUS = "{{ need.status }}";
     const ASSIGNED_VOL_ID = "{{ need.assigned_volunteer_id or '' }}";
     const NGO_ID    = "{{ need.ngo_id or '' }}";
+    
+    // Add this to store the Match ID context
+    let MATCH_ID = null;
 
     // ── Boot ──────────────────────────────────────────────────
     document.addEventListener("DOMContentLoaded", loadDetails);
@@ -745,17 +748,17 @@
     function esc(s) {
       return String(s||"").replace(/[&<>"']/g, m => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
     }
-
     // ══════════════════════════════════════════════════
-    // WORK TRACKER — timer + live location sync
+    // WORK TRACKER — Firebase Synced Timer + Live Location
     // ══════════════════════════════════════════════════
     let _timerInterval  = null;
     let _elapsedSeconds = 0;
     let _isRunning      = false;
+    let _sessionStartEpoch = null; // Tracks start time of current active session
     let _locationWatchId = null;
-    let _locationQueue  = [];          // offline retry queue
+    let _locationQueue  = [];      // offline retry queue
     let _lastLat = null, _lastLng = null;
-    const LOC_THRESHOLD_KM = 0.1;     // only push if moved >100 m
+    const LOC_THRESHOLD_KM = 0.1;  // only push if moved >100 m
 
     // ── haversine distance (km) ──────────────────────
     function _haversine(lat1, lng1, lat2, lng2) {
@@ -772,36 +775,38 @@
       return `${h}:${m}:${sc}`;
     }
 
-    // ── restore timer from localStorage ─────────────
-    function _restoreTimer() {
-      const key = `tracker_${NEED_ID}`;
-      try {
-        const saved = JSON.parse(localStorage.getItem(key) || 'null');
-        if (saved && saved.running && saved.startEpoch) {
-          _elapsedSeconds = saved.elapsed + Math.floor((Date.now() - saved.startEpoch) / 1000);
-          return true;  // was running
-        } else if (saved) {
-          _elapsedSeconds = saved.elapsed || 0;
-        }
-      } catch {}
-      return false;
-    }
-
-    // ── persist timer state ──────────────────────────
-    function _saveTimer(running) {
-      const key = `tracker_${NEED_ID}`;
-      localStorage.setItem(key, JSON.stringify({
-        elapsed: _elapsedSeconds,
-        running,
-        startEpoch: running ? Date.now() : null
-      }));
-    }
-
-    // ── init tracker on DOM ready ────────────────────
+    // ── init tracker on DOM ready (Firebase Source of Truth) ──
     function initTracker() {
-      const wasRunning = _restoreTimer();
-      _updateClockUI();
-      if (wasRunning) _startTimer();
+      // Note: `NEED_ID` is defined globally in the template. 
+      // We will fetch the latest state from the API.
+      fetch(`/api/need/${NEED_ID}`)
+        .then(res => res.json())
+        .then(data => {
+            const need = data.need;
+            if (!need) return;
+
+            // 1. Base accumulated time from Firebase
+            let totalMs = need.total_work_ms || 0;
+            _elapsedSeconds = Math.floor(totalMs / 1000);
+            
+            // 2. Check if currently running
+            if (need.work_status === 'working' && need.current_session_start) {
+                // current_session_start is in Unix seconds
+                const startMs = need.current_session_start * 1000;
+                const nowMs = Date.now();
+                
+                // Add the time elapsed in the current active session
+                if (nowMs > startMs) {
+                    _elapsedSeconds += Math.floor((nowMs - startMs) / 1000);
+                }
+                
+                _sessionStartEpoch = startMs;
+                _startTimer(false); // false = resume existing session on UI
+            }
+            
+            _updateClockUI();
+        })
+        .catch(err => console.error("Error initializing tracker:", err));
     }
 
     // ── toggle start / pause ─────────────────────────
@@ -811,13 +816,19 @@
       const label = document.getElementById("trackerBtnLabel");
       btn.disabled = true;
 
+      if (!MATCH_ID) {
+          showToast("Task context missing. Please refresh.", "error");
+          btn.disabled = false;
+          return;
+      }
+
       if (!_isRunning) {
         // --- START ---
         try {
           const res = await fetch("/api/volunteer/work/start", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ need_id: NEED_ID })
+            body: JSON.stringify({ task_id: MATCH_ID }) 
           });
           if (!res.ok) throw new Error(await res.text());
         } catch (err) {
@@ -825,23 +836,21 @@
           btn.disabled = false;
           return;
         }
-        _startTimer();
-        icon.textContent  = "pause";
-        label.textContent = "Pause Work";
-        btn.classList.add("pausing");
-        document.getElementById("trackerStatus").textContent = "Session active";
-        document.getElementById("trackerMilestoneWrap").style.display = "block";
-        document.getElementById("trackerLocation").style.display     = "flex";
-        _startLocationSync();
+        
+        _sessionStartEpoch = Date.now();
+        _startTimer(true); // true = brand new session
         showToast("Work session started ✅", "success");
 
       } else {
         // --- PAUSE ---
+        // Calculate ONLY the duration of this specific continuous session
+        const sessionDurationMs = Date.now() - _sessionStartEpoch;
+
         try {
           const res = await fetch("/api/volunteer/work/pause", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ need_id: NEED_ID, elapsed: _elapsedSeconds })
+            body: JSON.stringify({ task_id: MATCH_ID, duration_ms: sessionDurationMs, comment: "Paused via tracker" }) 
           });
           if (!res.ok) throw new Error(await res.text());
         } catch (err) {
@@ -849,26 +858,37 @@
           btn.disabled = false;
           return;
         }
+        
         _pauseTimer();
-        icon.textContent  = "play_arrow";
-        label.textContent = "Resume Work";
-        btn.classList.remove("pausing");
-        document.getElementById("trackerStatus").textContent = "Paused";
-        _stopLocationSync();
         showToast("Session paused", "success");
       }
 
       btn.disabled = false;
     }
 
-    function _startTimer() {
+    function _startTimer(isNewSession) {
       _isRunning = true;
-      _saveTimer(true);
       document.getElementById("trackerClock").classList.add("running");
+      
+      const btn = document.getElementById("trackerToggleBtn");
+      const icon = document.getElementById("trackerBtnIcon");
+      const label = document.getElementById("trackerBtnLabel");
+      
+      // Setup UI to "Pause" state
+      if (btn) {
+          icon.textContent = "pause";
+          label.textContent = "Pause Work";
+          btn.classList.add("pausing");
+          document.getElementById("trackerStatus").textContent = "Session active";
+          document.getElementById("trackerMilestoneWrap").style.display = "block";
+          document.getElementById("trackerLocation").style.display = "flex";
+      }
+
+      _startLocationSync();
+
       _timerInterval = setInterval(() => {
         _elapsedSeconds++;
         _updateClockUI();
-        if (_elapsedSeconds % 30 === 0) _saveTimer(true); // auto-save every 30 s
       }, 1000);
     }
 
@@ -876,8 +896,20 @@
       _isRunning = false;
       clearInterval(_timerInterval);
       _timerInterval = null;
-      _saveTimer(false);
       document.getElementById("trackerClock").classList.remove("running");
+
+      const btn = document.getElementById("trackerToggleBtn");
+      const icon = document.getElementById("trackerBtnIcon");
+      const label = document.getElementById("trackerBtnLabel");
+
+      if (btn) {
+          icon.textContent  = "play_arrow";
+          label.textContent = "Resume Work";
+          btn.classList.remove("pausing");
+          document.getElementById("trackerStatus").textContent = "Paused";
+      }
+
+      _stopLocationSync();
     }
 
     function _updateClockUI() {
@@ -890,17 +922,16 @@
       const input = document.getElementById("milestoneInput");
       const comment = input?.value.trim();
       if (!comment) { showToast("Please enter a milestone comment.", "error"); return; }
+      if (!MATCH_ID) return;
 
       try {
-        const res = await fetch("/api/volunteer/work/start", {
+        const res = await fetch("/api/volunteer/work/log", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ need_id: NEED_ID, comment, elapsed: _elapsedSeconds })
+          body: JSON.stringify({ task_id: MATCH_ID, comment }) 
         });
-        // We reuse start endpoint to log — backend handles idempotency
       } catch {}
 
-      // Render locally
       const log  = document.getElementById("trackerLog");
       const item = document.createElement("div");
       item.className = "tracker-log-item";
@@ -919,7 +950,6 @@
         (err) => console.warn("Geo error:", err),
         { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 }
       );
-      // Also flush any queued updates
       _flushLocationQueue();
     }
 
@@ -931,12 +961,11 @@
     }
 
     async function syncLocation(lat, lng) {
-      // Threshold check — only push if moved >100 m
+      if (!MATCH_ID) return;
       if (_lastLat !== null && _haversine(_lastLat, _lastLng, lat, lng) < LOC_THRESHOLD_KM) return;
 
       _lastLat = lat; _lastLng = lng;
 
-      // Update status text
       const locText = document.getElementById("trackerLocationText");
       if (locText) locText.textContent = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
 
@@ -944,28 +973,27 @@
         const res = await fetch("/api/volunteer/work/location", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ need_id: NEED_ID, lat, lng })
+          body: JSON.stringify({ task_id: MATCH_ID, lat, lng }) 
         });
         if (!res.ok) throw new Error("Location push failed");
-        // On success, flush any queued items
         _flushLocationQueue();
       } catch {
-        // Offline — queue for retry
         _locationQueue.push({ lat, lng, ts: Date.now() });
         if (locText) locText.textContent += " (queued)";
       }
     }
 
     async function _flushLocationQueue() {
+      if (!MATCH_ID) return;
       while (_locationQueue.length > 0) {
         const item = _locationQueue[0];
         try {
           const res = await fetch("/api/volunteer/work/location", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ need_id: NEED_ID, lat: item.lat, lng: item.lng })
+            body: JSON.stringify({ task_id: MATCH_ID, lat: item.lat, lng: item.lng }) 
           });
-          if (!res.ok) break; // still offline
+          if (!res.ok) break; 
           _locationQueue.shift();
         } catch { break; }
       }
@@ -977,25 +1005,22 @@
     let _ngoPollInterval = null;
 
     async function initNgoLiveMap() {
-      // 1. Get API Key
       const keyRes = await fetch("/api/get_ola_maps_key");
       const { OLA_MAPS_API_KEY } = await keyRes.json();
       if (!OLA_MAPS_API_KEY) return;
 
       const olaMaps = new OlaMaps({ apiKey: OLA_MAPS_API_KEY });
       
-      // We'll initialize with task location first
       _ngoMapInstance = olaMaps.init({
         style: "https://api.olamaps.io/tiles/vector/v1/styles/default-light-standard/style.json",
         container: "ngoLiveMap",
-        center: [0, 0], // placeholders
+        center: [0, 0], 
         zoom: 14
       });
 
       _ngoMapInstance.on('load', () => {
-        // Poll for volunteer location
         _pollVolunteerLocation();
-        _ngoPollInterval = setInterval(_pollVolunteerLocation, 30000); // 30s
+        _ngoPollInterval = setInterval(_pollVolunteerLocation, 30000); 
       });
     }
 
@@ -1003,7 +1028,7 @@
       try {
         const res = await fetch(`/api/need/${NEED_ID}`);
         const data = await res.json();
-        const vLoc = data.need.volunteer_location; // assuming this is where it's stored in the flattened view
+        const vLoc = data.need.volunteer_location; 
         
         if (vLoc && vLoc.lat && vLoc.lng) {
           if (!_ngoMarkerInstance) {

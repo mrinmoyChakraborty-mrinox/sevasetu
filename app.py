@@ -1218,8 +1218,8 @@ def api_need_detail(need_id):
     if not need:
         return jsonify({"error": "Not found"}), 404
 
-    # Serialize Firestore timestamps
-    for field in ("created_at", "updated_at"):
+    # Fix: Added "current_session_start" to ensure Firebase timestamp converts to Unix seconds
+    for field in ("created_at", "updated_at", "current_session_start"):
         ts = need.get(field)
         if ts and hasattr(ts, "timestamp"):
             need[field] = ts.timestamp()
@@ -1331,7 +1331,7 @@ def api_volunteer_match_for_need(need_id):
         db.collection("matches")
           .where("need_id",      "==", need_id)
           .where("volunteer_id", "==", uid)
-          .where("status",       "in", ["accepted", "in_progress"])
+          .where("status",       "in", ["accepted", "in_progress","suggested", "in_review"])
           .limit(1)
           .stream()
     )
@@ -1341,6 +1341,31 @@ def api_volunteer_match_for_need(need_id):
 
     return jsonify({"error": "Match not found"}), 404
 
+
+# ── POST /api/volunteer/work/log ──
+
+@app.route("/api/volunteer/work/log", methods=["POST"])
+def api_volunteer_work_log():
+    """Endpoint for adding milestone logs while timer is actively running."""
+    if not session.get("user"):
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    uid  = session["user"]["uid"]
+    data = request.json or {}
+    task_id = data.get("task_id")
+    comment = data.get("comment", "")
+    
+    if not task_id:
+        return jsonify({"error": "Task ID required"}), 400
+        
+    db = firebase_services.get_db()
+    db.collection("matches").document(task_id).collection("work_log").add({
+        "comment": comment,
+        "duration_ms": 0,
+        "timestamp": firestore.SERVER_TIMESTAMP,
+        "type": "log"
+    })
+    return jsonify({"success": True})
 
 # ── GET /volunteer/task/complete/<need_id> ──
 
@@ -1809,29 +1834,32 @@ def api_get_all_volunteers():
         return jsonify({"error": "Unauthorized"}), 401
     
     db = firebase_services.get_db()
-    vol_docs = db.collection("volunteers").stream()
-    
-    volunteers = []
-    for doc in vol_docs:
-        d = doc.to_dict()
-        d["id"] = doc.id
-        
-        # Format createdAt
-        ts = d.get("createdAt")
-        if ts and hasattr(ts, "timestamp"):
-            d["joined"] = ts.strftime("%b %Y")
-            d["createdAt"] = {"_seconds": int(ts.timestamp())}
-        else:
-            d["joined"] = "N/A"
-            
-        d["status"] = "Active" if d.get("verified") else "Pending"
-        # Map fields for JS
-        d["image"] = d.get("photo_url", "")
-        d["tasks"] = d.get("totalTasks", 0)
-        
-        volunteers.append(d)
-        
-    return jsonify(volunteers)
+    volunteers_ref = db.collection("volunteers").stream()
+    result = []
+
+    for doc in volunteers_ref:
+        vol = doc.to_dict()
+        uid = doc.id
+
+        user_doc = db.collection("users").document(uid).get()
+        user = user_doc.to_dict() if user_doc.exists else {}
+
+        result.append({
+            "id": uid,
+            "name": user.get("name"),
+            "email": user.get("email"),
+            "photo": user.get("photo_url"),
+
+            "skills": vol.get("skills", []),
+            "availability": vol.get("availability"),
+            "city": vol.get("location", {}).get("city"),
+            "status": "Active" if vol.get("online") else "Offline",
+            "rating": vol.get("rating", 0),
+            "tasks": vol.get("totalTasks", 0),
+            "phone": user.get("phone")
+        })
+
+    return jsonify(result)
 
 @app.route("/api/volunteers/<id>/approve", methods=["PATCH"])
 def api_approve_volunteer(id):
