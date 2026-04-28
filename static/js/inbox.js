@@ -82,8 +82,9 @@ document.addEventListener("DOMContentLoaded", function () {
         });
 
         socket.on("display_typing", (data) => {
+            console.log("⌨️ Typing event received:", data);
             const status = document.getElementById("chatUserStatus");
-            if (status && data.user_id !== currentUserUid) {
+            if (status && data.user_id !== currentUserUid && data.conversation_id === activeConversationId) {
                 status.textContent = data.is_typing ? "Typing..." : "Online";
             }
         });
@@ -371,7 +372,8 @@ document.addEventListener("DOMContentLoaded", function () {
             if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
         });
         messageInput.addEventListener("input", () => {
-            if (!activeConversationId || !socket || !socket.connected) return;
+            if (!activeConversationId || !socket) return;
+            console.log("⌨️ Sending typing status:", true);
             socket.emit("typing", {
                 conversation_id: activeConversationId,
                 is_typing: true,

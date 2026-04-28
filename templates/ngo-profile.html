@@ -164,7 +164,6 @@
 
 <div class="flex gap-3 pb-4">
 <button id="messageBtn" class="bg-surface-container-highest text-on-surface px-8 py-3 rounded-full font-bold hover:scale-[1.05] transition-all">Message</button>
-<button id="followBtn" class="sage-gradient text-white px-8 py-3 rounded-full font-bold shadow-lg shadow-primary/20 hover:scale-[1.05] transition-all">Follow</button>
 </div>
 </div>
 </header>
@@ -294,8 +293,8 @@
         <span id="estYear" class="text-on-surface-variant font-bold text-sm"></span>
       </div>
     </div>
-
   </div>
+</div>
 </div>
 </main>
  <!-- LOCATION -->
@@ -337,5 +336,9 @@
 
     </div>
 </section>
+<script>
+    // Inject UID from server — works for both /ngo/<uid> and ?ngoId= (legacy)
+    window.PROFILE_UID = "{{ profile_uid | default('') }}" || new URLSearchParams(location.search).get("ngoId");
+</script>
 <script src="{{ url_for('static', filename='js/ngo-profile.js') }}"></script>
 </body></html>

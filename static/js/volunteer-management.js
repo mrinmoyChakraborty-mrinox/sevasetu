@@ -307,12 +307,16 @@ function updatePendingCount(data) {
         detailsPanel.classList.remove("hidden");
         container.classList.add("pr-[360px]", "lg:grid-cols-2");
 
-        document.getElementById("volName").textContent = vol.name || "Anonymous";
-        document.getElementById("volEmail").textContent = vol.email || "No email";
-        document.getElementById("volPhone").textContent = vol.phone || "Not provided";
-        document.getElementById("volCity").textContent = vol.city || "N/A";
-        document.getElementById("volJoined").textContent = vol.joined || "N/A";
-        document.getElementById("volImage").src = vol.photo || "/static/images/avatar.png";
+        document.getElementById("volName").textContent    = vol.name  || "Anonymous";
+        document.getElementById("volEmail").textContent   = vol.email || "No email";
+        document.getElementById("volPhone").textContent   = vol.phone || "Not provided";
+        document.getElementById("volCity").textContent    = vol.city  || "N/A";
+        document.getElementById("volJoined").textContent  = vol.joined || "N/A";
+        document.getElementById("volImage").src           = vol.photo || "/static/images/avatar.png";
+
+        // Bio / about
+        const bioEl = document.getElementById("volBio");
+        if (bioEl) bioEl.textContent = vol.about || "No bio provided.";
 
         const skillsContainer = document.getElementById("volSkills");
         const skills = Array.isArray(vol.skills) ? vol.skills : [];

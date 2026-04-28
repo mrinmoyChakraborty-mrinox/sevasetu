@@ -1760,10 +1760,18 @@ def handle_send_message(data):
 
 @socketio.on('typing')
 def handle_typing(data):
-    conv_id = data.get('conversation_id')
+    conv_id   = data.get('conversation_id')
     is_typing = data.get('is_typing')
-    user_id = data.get('user_id')
-    emit('display_typing', {'user_id': user_id, 'is_typing': is_typing}, room=conv_id, include_self=False)
+    user_id   = data.get('user_id')
+    if not conv_id or user_id is None:
+        return
+    # Re-join in case of a new poll connection (stateless polling transport)
+    join_room(conv_id)
+    emit('display_typing', {
+        'user_id': user_id, 
+        'is_typing': is_typing,
+        'conversation_id': conv_id
+    }, room=conv_id, include_self=False)
 
 @app.route("/inbox")
 def inbox_page():
@@ -2017,6 +2025,7 @@ def api_get_all_volunteers():
             "rating": vol.get("rating", 0),
             "tasks": vol.get("totalTasks", 0),
             "phone": user.get("phone") or vol.get("phone", "Not provided"),
+            "about": vol.get("about", ""),
             "joined": joined
         })
 
@@ -2111,8 +2120,153 @@ def api_admin_chat_start():
     conv_id = firebase_services.get_or_create_conversation([admin_uid, other_uid])
     return jsonify({"success": True, "conversation_id": conv_id})
 
-if __name__ == "__main__":
-    socketio.run(app, debug=True)
+# ══════════════════════════════════════════════
+# PUBLIC PROFILE PAGES
+# ══════════════════════════════════════════════
+
+@app.route("/volunteer/<uid>")
+def volunteer_profile_page(uid):
+    """Publicly sharable volunteer profile page — no login required."""
+    return render_template("vol-profile.html", profile_uid=uid, user=session.get("user"))
+
+@app.route("/ngo/<uid>")
+def ngo_profile_page(uid):
+    """Publicly sharable NGO profile page — no login required."""
+    return render_template("ngo-profile.html", profile_uid=uid, user=session.get("user"))
+
+
+# ══════════════════════════════════════════════
+# PUBLIC PROFILE APIS
+# ══════════════════════════════════════════════
+
+@app.route("/api/volunteer/<uid>")
+def api_volunteer_profile(uid):
+    """Public volunteer profile data — no login required."""
+    db = firebase_services.get_db()
+
+    vol_doc  = db.collection("volunteers").document(uid).get()
+    user_doc = db.collection("users").document(uid).get()
+
+    if not vol_doc.exists:
+        return jsonify({"error": "Volunteer not found"}), 404
+
+    vol  = vol_doc.to_dict()
+    user = user_doc.to_dict() if user_doc.exists else {}
+
+    # Completed tasks
+    completed = list(
+        db.collection("matches")
+          .where("volunteer_id", "==", uid)
+          .where("status", "==", "completed")
+          .stream()
+    )
+    ngo_ids_assisted = {m.to_dict().get("ngo_id") for m in completed if m.to_dict().get("ngo_id")}
+
+    assignments = []
+    for m in completed[:10]:   # last 10 only for public view
+        mdata = m.to_dict()
+        assignments.append({
+            "title":  mdata.get("title", "Task"),
+            "ngo":    mdata.get("ngo_name", "NGO"),
+            "time":   mdata.get("updated_at", ""),
+            "status": "completed",
+        })
+
+    return jsonify({
+        "name":           user.get("name") or vol.get("name", "Volunteer"),
+        "bio":            vol.get("about", ""),
+        "image":          user.get("photo_url") or vol.get("photo_url", ""),
+        "skills":         vol.get("skills", []),
+        "availability":   {
+            "schedule": vol.get("availability", "Anytime"),
+            "radius":   vol.get("radius", 10),
+            "urgent":   vol.get("online", False)
+        },
+        "hours_helped":   round(vol.get("totalHours", 0), 1),
+        "tasks_completed": vol.get("totalTasks", 0),
+        "ngos_assisted":  len(ngo_ids_assisted),
+        "assignments":    assignments,
+        "is_owner":       session.get("user", {}).get("uid") == uid
+    })
+
+
+@app.route("/api/volunteer/update", methods=["POST"])
+def api_volunteer_update():
+    """Update own volunteer profile."""
+    if not session.get("user") or session["user"].get("role") != "volunteer":
+        return jsonify({"error": "Unauthorized"}), 401
+        
+    uid = session["user"]["uid"]
+    data = request.json or {}
+    
+    db = firebase_services.get_db()
+    
+    update_data = {}
+    if "bio" in data: update_data["about"] = data["bio"]
+    if "skills" in data: update_data["skills"] = data["skills"]
+    if "radius" in data: update_data["radius"] = data["radius"]
+    if "schedule" in data: update_data["availability"] = data["schedule"]
+    
+    if update_data:
+        db.collection("volunteers").document(uid).update(update_data)
+        
+    return jsonify({"success": True})
+
+
+@app.route("/api/ngo/<uid>")
+def api_ngo_profile(uid):
+    """Public NGO profile data — no login required."""
+    db = firebase_services.get_db()
+
+    ngo_doc  = db.collection("ngos").document(uid).get()
+    user_doc = db.collection("users").document(uid).get()
+
+    if not ngo_doc.exists:
+        return jsonify({"error": "NGO not found"}), 404
+
+    ngo  = ngo_doc.to_dict()
+    user = user_doc.to_dict() if user_doc.exists else {}
+
+    # Format created_at
+    ts = ngo.get("created_at") or user.get("createdAt")
+    created_str = ""
+    if ts and hasattr(ts, "isoformat"):
+        created_str = ts.isoformat()
+    elif ts and hasattr(ts, "timestamp"):
+        created_str = datetime.fromtimestamp(ts.timestamp(), tz=timezone.utc).isoformat()
+
+    return jsonify({
+        "name":        ngo.get("name") or user.get("name", "NGO"),
+        "tagline":     ngo.get("tagline", ""),
+        "description": ngo.get("description") or ngo.get("about", ""),
+        "image":       ngo.get("logo_url") or user.get("photo_url", ""),
+        "email":       ngo.get("email") or user.get("email", ""),
+        "phone":       ngo.get("phone") or user.get("phone", ""),
+        "location":    ngo.get("address") or ngo.get("location", ""),
+        "verified":    ngo.get("verified", False),
+        "created_at":  created_str,
+    })
+
+
+@app.route("/api/needs")
+def api_needs_public():
+    """Public needs list — filterable by ngo_id. No login required."""
+    db     = firebase_services.get_db()
+    ngo_id = request.args.get("ngo_id")
+
+    query = db.collection("needs")
+    if ngo_id:
+        query = query.where("ngo_id", "==", ngo_id)
+
+    docs = query.stream()
+    result = []
+    for d in docs:
+        data = d.to_dict()
+        data["id"] = d.id
+        result.append(data)
+
+    return jsonify(result)
+
 
 @app.route("/api/chat/start-with-ngo/<need_id>", methods=["POST"])
 def api_chat_start_with_ngo(need_id):
@@ -2431,3 +2585,7 @@ def api_admin_delete_account():
         return jsonify({"success": True})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+if __name__ == "__main__":
+    socketio.run(app, debug=True)

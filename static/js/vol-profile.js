@@ -1,10 +1,7 @@
 document.addEventListener("DOMContentLoaded", async () => {
 
-    // =========================
-    // GET VOLUNTEER ID
-    // =========================
-    const urlParams = new URLSearchParams(window.location.search);
-    const volunteerId = urlParams.get("volunteerId");
+    // Get volunteer ID from server-injected global (clean URL) or fallback to query param
+    const volunteerId = window.PROFILE_UID || new URLSearchParams(window.location.search).get("volunteerId");
 
     if (!volunteerId) {
         console.error("Volunteer ID missing");
@@ -106,7 +103,7 @@ try {
         renderAvailability(data.availability || {});
         renderStats(data);
         renderAssignments(data.assignments || []);
-        setupButtons(volunteerId);
+        setupButtons(volunteerId, data);
 
 //     } catch (err) {
 //         console.error(err);
@@ -242,16 +239,117 @@ function renderAssignments(list) {
 
 
 // =========================
-// BUTTONS
+// BUTTONS & EDIT MODAL
 // =========================
-function setupButtons(volunteerId) {
+let currentSkills = [];
 
+function setupButtons(volunteerId, data) {
+    // 1. MESSAGE BUTTON
     const messageBtn = document.getElementById("messageBtn");
-
     if (messageBtn) {
-        messageBtn.addEventListener("click", () => {
-            window.location.href = `/chat?volunteerId=${volunteerId}`;
+        messageBtn.addEventListener("click", async () => {
+            const auth = await fetch("/api/check-auth").then(r => r.json()).catch(() => ({}));
+            if (!auth.authenticated) { window.location.href = "/getstarted"; return; }
+            const res = await fetch("/api/chat/start", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ other_uid: volunteerId })
+            });
+            const d = await res.json();
+            if (d.conversation_id) window.location.href = `/inbox?conv_id=${d.conversation_id}`;
         });
+    }
+
+    // 2. EDIT BUTTON (Only if owner)
+    const editBtn = document.getElementById("editProfileBtn");
+    if (data.is_owner && editBtn) {
+        editBtn.classList.remove("hidden");
+        editBtn.addEventListener("click", () => openEditModal(data));
+    }
+
+    // 3. MODAL CONTROLS
+    const modal = document.getElementById("editProfileModal");
+    const closeBtn = document.getElementById("closeEditModal");
+    const saveBtn = document.getElementById("saveProfileBtn");
+    const addSkillBtn = document.getElementById("addSkillBtn");
+
+    if (closeBtn) closeBtn.onclick = () => modal.classList.add("hidden");
+    if (addSkillBtn) addSkillBtn.onclick = addSkillFromInput;
+    if (saveBtn) saveBtn.onclick = () => saveProfile(volunteerId);
+}
+
+function openEditModal(data) {
+    const modal = document.getElementById("editProfileModal");
+    modal.classList.remove("hidden");
+
+    document.getElementById("editBio").value = data.bio || "";
+    document.getElementById("editSchedule").value = data.availability?.schedule || "Anytime";
+    document.getElementById("editRadius").value = data.availability?.radius || 10;
+
+    currentSkills = [...(data.skills || [])];
+    renderEditSkills();
+}
+
+function renderEditSkills() {
+    const list = document.getElementById("editSkillsList");
+    list.innerHTML = "";
+    currentSkills.forEach((s, idx) => {
+        const chip = document.createElement("div");
+        chip.className = "bg-surface-container-high px-4 py-2 rounded-full flex items-center gap-2 text-sm";
+        chip.innerHTML = `
+            <span>${s}</span>
+            <button onclick="removeSkill(${idx})" class="material-symbols-outlined text-sm text-error hover:scale-125 transition-transform">close</button>
+        `;
+        list.appendChild(chip);
+    });
+}
+
+window.removeSkill = (idx) => {
+    currentSkills.splice(idx, 1);
+    renderEditSkills();
+};
+
+function addSkillFromInput() {
+    const input = document.getElementById("newSkillInput");
+    const val = input.value.trim();
+    if (val && !currentSkills.includes(val)) {
+        currentSkills.push(val);
+        renderEditSkills();
+        input.value = "";
+    }
+}
+
+async function saveProfile(volunteerId) {
+    const saveBtn = document.getElementById("saveProfileBtn");
+    const originalText = saveBtn.textContent;
+    saveBtn.disabled = true;
+    saveBtn.textContent = "Saving...";
+
+    const payload = {
+        bio: document.getElementById("editBio").value,
+        skills: currentSkills,
+        schedule: document.getElementById("editSchedule").value,
+        radius: parseInt(document.getElementById("editRadius").value) || 10
+    };
+
+    try {
+        const res = await fetch("/api/volunteer/update", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+            window.location.reload();
+        } else {
+            alert("Failed to save changes");
+            saveBtn.disabled = false;
+            saveBtn.textContent = originalText;
+        }
+    } catch (err) {
+        console.error(err);
+        alert("Error saving profile");
+        saveBtn.disabled = false;
+        saveBtn.textContent = originalText;
     }
 }
 

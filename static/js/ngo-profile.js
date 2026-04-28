@@ -1,10 +1,7 @@
 document.addEventListener("DOMContentLoaded", async () => {
 
-    // =========================
-    // GET NGO ID
-    // =========================
-    const urlParams = new URLSearchParams(window.location.search);
-    const ngoId = urlParams.get("ngoId");
+    // Get NGO ID from server-injected global (clean URL) or fallback to query param
+    const ngoId = window.PROFILE_UID || new URLSearchParams(window.location.search).get("ngoId");
 
     if (!ngoId) {
         console.error("NGO ID missing");
@@ -319,47 +316,26 @@ function renderStats(needs) {
         activeNeeds > 0 ? "Engaged" : "Idle";
 }
 
-// =========================
-// BUTTONS
-// =========================
 function setupButtons(ngoId) {
-
-   
-    // =========================
-    // MESSAGE BUTTON
-    // =========================
+    // MESSAGE BUTTON — auth-gated
     const messageBtn = document.getElementById("messageBtn");
-
     if (messageBtn) {
-        messageBtn.addEventListener("click", () => {
-            window.location.href = `/chat?ngoId=${ngoId}`;
+        messageBtn.addEventListener("click", async () => {
+            // Check auth via API (more robust than template variables)
+            const authRes = await fetch("/api/check-auth").then(r => r.json()).catch(() => ({}));
+            if (!authRes.authenticated) {
+                window.location.href = "/getstarted";
+                return;
+            }
+            const res = await fetch("/api/chat/start", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ other_uid: ngoId })
+            });
+            const data = await res.json();
+            if (data.conversation_id) {
+                window.location.href = `/inbox?conv_id=${data.conversation_id}`;
+            }
         });
     }
-
-    // =========================
-    // FOLLOW BUTTON (TEMP SIMPLE)
-    // =========================
-   const followBtn = document.getElementById("followBtn");
-
-    if (followBtn) {
-        followBtn.addEventListener("click", async () => {
-
-            try {
-                const res = await fetch(`/api/ngo/${ngoId}/follow`, {
-                    method: "POST"
-                });
-
-                if (res.ok) {
-                    alert("Followed NGO");
-                } else {
-                    alert("Failed to follow NGO");
-                }
-
-            } catch (err) {
-                console.error(err);
-                alert("Network error");
-            }
-
-    });
-}
 }
