@@ -137,7 +137,14 @@
           <span class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
         </button>
         <!-- Avatar -->
-        <a href="/profile">
+        {% if session['user'].get('role') == 'volunteer' %}
+          {% set profile_link = '/volunteer/' + session['user']['uid'] %}
+        {% elif session['user'].get('role') == 'ngo' %}
+          {% set profile_link = '/ngo/' + session['user']['uid'] %}
+        {% else %}
+          {% set profile_link = '/' + session['user'].get('role', 'volunteer') + '/dashboard' %}
+        {% endif %}
+        <a href="{{ profile_link }}">
           <div class="w-10 h-10 rounded-full overflow-hidden border-2 border-primary-container relative flex items-center justify-center bg-surface-container">
             <img id="topbar-avatar" alt="User profile" src="{{ session['user'].get('photo_url', '') }}" class="w-full h-full object-cover"/>
             <span id="topbar-avatar-fallback" class="hidden font-bold text-primary"></span>
