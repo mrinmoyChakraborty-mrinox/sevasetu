@@ -113,7 +113,7 @@ def extract_needs_from_url(image_url: str, file_type: str = "") -> list[dict]:
                 ),
                 _build_prompt(),
             ],
-            config = generation_config,
+            #config = generation_config,
         )
 
     return _parse_response(response.text.strip())
