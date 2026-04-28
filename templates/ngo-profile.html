@@ -29,58 +29,126 @@
             <!-- NGO INFO -->
             <div class="flex-1 pb-2">
                 <div class="flex items-center gap-3 mb-1">
-                    <!-- NAME -->
                     <h1 id="ngoName" class="text-4xl md:text-5xl font-black text-on-surface tracking-tight font-headline">NGO</h1>
-                    <!-- VERIFIED BADGE -->
                     <span id="verifiedBadge" class="material-symbols-outlined text-primary text-3xl hidden" title="Verified NGO">verified</span>
                 </div>
-                <!-- TAGLINE -->
-                <p id="ngoTagline" class="text-xl text-[#3e4942] font-medium max-w-2xl">
-                    Empowering communities through collective action and compassion.
+                <p id="ngoTagline" class="text-xl text-on-surface-variant font-medium max-w-2xl">
+                    Loading mission...
                 </p>
             </div>
 
             <div class="flex gap-3 pb-4">
-                <button id="messageBtn" class="bg-surface-container-highest text-on-surface px-8 py-3 rounded-full font-bold hover:scale-[1.05] transition-all">Message</button>
+                <button id="messageBtn" class="bg-primary text-on-primary px-8 py-3 rounded-full font-bold hover:scale-[1.05] transition-all shadow-lg shadow-primary/20">Message</button>
             </div>
         </div>
     </header>
 
-    <!-- Content Grid -->
+    <!-- Main Grid -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-      </div>
+        <!-- Left: About & Skills -->
+        <div class="lg:col-span-2 space-y-8">
+            <!-- ABOUT -->
+            <section class="bg-surface-container-lowest p-8 rounded-3xl border border-outline-variant shadow-sm">
+                <h3 class="text-sm font-bold text-primary tracking-[0.2em] uppercase mb-6 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-sm">info</span>
+                    About Our Mission
+                </h3>
+                <div id="ngoDescription" class="prose prose-emerald max-w-none text-on-surface-variant leading-relaxed">
+                    <p>Loading NGO background...</p>
+                </div>
+            </section>
 
-      <div class="absolute inset-0 flex items-center justify-center">
-        <div class="relative">
-          <div class="absolute inset-0 animate-ping bg-primary/40 rounded-full"></div>
-
-          <div
-            class="relative bg-surface-container-lowest p-5 rounded-full shadow-2xl border-2 border-primary flex items-center justify-center">
-            <span class="material-symbols-outlined text-primary text-4xl fill-1">
-              location_on
-            </span>
-          </div>
+            <!-- SKILLS NEEDED -->
+            <section class="bg-surface-container-lowest p-8 rounded-3xl border border-outline-variant shadow-sm">
+                <h3 class="text-sm font-bold text-primary tracking-[0.2em] uppercase mb-6 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-sm">volunteer_activism</span>
+                    Skills We're Looking For
+                </h3>
+                <div id="skillsContainer" class="flex flex-wrap gap-3">
+                    <!-- Dynamic -->
+                </div>
+                <p id="noSkillsText" class="text-sm text-on-surface-variant hidden">No active skill requirements at the moment.</p>
+            </section>
         </div>
-      </div>
 
-      <div class="absolute bottom-8 left-1/2 -translate-x-1/2 w-[90%] md:w-auto">
-        <div
-          class="bg-white/80 dark:bg-black/40 backdrop-blur-xl border border-white/20 px-8 py-4 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.1)] flex items-center gap-4">
-          <div class="w-10 h-10 rounded-lg sage-gradient flex items-center justify-center text-white shrink-0">
-            <span class="material-symbols-outlined text-xl">explore</span>
-          </div>
-          <div class="text-left">
-            <p class="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Headquarters</p>
-            <p id="ngoLocation" class="text-lg font-bold text-on-surface leading-tight">Loading address...</p>
-          </div>
+        <!-- Right: Stats & Contact -->
+        <div class="space-y-8">
+            <!-- IMPACT STATS -->
+            <div class="bg-primary text-on-primary p-8 rounded-3xl shadow-xl shadow-primary/10 relative overflow-hidden">
+                <div class="relative z-10 space-y-6">
+                    <div>
+                        <p class="text-[10px] font-black uppercase tracking-[0.3em] opacity-70 mb-1">Total Impact</p>
+                        <div class="flex items-baseline gap-2">
+                            <span id="needsMet" class="text-5xl font-black tracking-tighter">0</span>
+                            <span class="text-lg font-bold opacity-80">Needs Met</span>
+                        </div>
+                    </div>
+                    
+                    <div class="flex gap-8">
+                        <div>
+                            <p class="text-[10px] font-black uppercase tracking-[0.2em] opacity-70">Growth</p>
+                            <p id="needsGrowth" class="text-2xl font-black">+0</p>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-black uppercase tracking-[0.2em] opacity-70">Volunteers</p>
+                            <div class="flex items-center gap-2">
+                                <p id="activeVolunteers" class="text-2xl font-black">0</p>
+                                <span id="volunteerStatus" class="text-[8px] font-bold uppercase tracking-widest bg-white/20 px-2 py-0.5 rounded-full">Idle</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Decorative background icon -->
+                <span class="material-symbols-outlined absolute -bottom-4 -right-4 text-9xl opacity-10 rotate-12">favorite</span>
+            </div>
+
+            <!-- YEARS OF SERVICE -->
+            <div class="bg-surface-container-low p-8 rounded-3xl border border-outline-variant shadow-sm">
+                <h4 class="text-sm font-bold text-on-surface-variant tracking-[0.2em] uppercase mb-4">Experience</h4>
+                <div class="flex items-center gap-4">
+                    <div class="w-14 h-14 rounded-2xl amber-gradient flex items-center justify-center text-white shadow-lg">
+                        <span id="yearsOfService" class="text-2xl font-black">0</span>
+                    </div>
+                    <div>
+                        <p class="font-bold text-on-surface">Years of Service</p>
+                        <p id="estYear" class="text-xs text-on-surface-variant font-medium tracking-wide">Est. ----</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CONTACT -->
+            <div class="bg-surface-container-lowest p-8 rounded-3xl border border-outline-variant shadow-sm space-y-6">
+                <h4 class="text-sm font-bold text-on-surface-variant tracking-[0.2em] uppercase">Contact Details</h4>
+                
+                <div class="space-y-4">
+                    <div class="flex items-center gap-4 group">
+                        <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary transition-colors group-hover:bg-primary group-hover:text-white">
+                            <span class="material-symbols-outlined text-xl">mail</span>
+                        </div>
+                        <p id="ngoEmail" class="text-sm font-bold text-on-surface truncate">Loading...</p>
+                    </div>
+
+                    <div class="flex items-center gap-4 group">
+                        <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary transition-colors group-hover:bg-primary group-hover:text-white">
+                            <span class="material-symbols-outlined text-xl">call</span>
+                        </div>
+                        <p id="ngoPhone" class="text-sm font-bold text-on-surface">Loading...</p>
+                    </div>
+
+                    <div class="flex items-center gap-4 group">
+                        <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary transition-colors group-hover:bg-primary group-hover:text-white">
+                            <span class="material-symbols-outlined text-xl">location_on</span>
+                        </div>
+                        <p id="ngoLocation" class="text-sm font-bold text-on-surface leading-tight">Loading address...</p>
+                    </div>
+                </div>
+            </div>
         </div>
-      </div>
-
     </div>
-  </section>
-  <script>
-    // Inject UID from server — works for both /ngo/<uid> and ?ngoId= (legacy)
+</div>
+
+<script>
     window.PROFILE_UID = "{{ profile_uid | default('') }}" || new URLSearchParams(location.search).get("ngoId");
-  </script>
-  <script src="{{ url_for('static', filename='js/ngo-profile.js') }}"></script>
+</script>
+<script src="{{ url_for('static', filename='js/ngo-profile.js') }}"></script>
 {% endblock %}
