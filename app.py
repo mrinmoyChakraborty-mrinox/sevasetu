@@ -2015,7 +2015,7 @@ def api_get_all_volunteers():
 
         result.append({
             "id": uid,
-            "name": user.get("name") or vol.get("name", "Anonymous"),
+            "name": vol.get("name", "Anonymous") or user.get("name", "Anonymous"),
             "email": user.get("email") or vol.get("email"),
             "photo": user.get("photo_url") or vol.get("photo_url"),
             "skills": vol.get("skills", []),
@@ -2200,13 +2200,13 @@ def api_volunteer_profile(uid):
         contributions.append({
             "title":  mdata.get("title") or mdata.get("need_title") or "Community Support",
             "description": description[:120] + "..." if len(description) > 120 else description,
-            "ngo":    mdata.get("ngo_name") or "Local NGO",
+            "ngo":    firebase_services.get_ngo_profile(need_doc.to_dict().get("ngo_id")).get("org_name", "NGO"),
             "time":   time_str,
             "status": "completed"
         })
 
     return jsonify({
-        "name":           user.get("name") or vol.get("name", "Volunteer"),
+        "name":           vol.get("name", "Volunteer") or user.get("name", "Volunteer"),
         "bio":            vol.get("about", ""),
         "image":          user.get("photo_url") or vol.get("photo_url", ""),
         "skills":         vol.get("skills", []),
@@ -2294,7 +2294,7 @@ def api_ngo_profile(uid):
         created_str = datetime.fromtimestamp(ts.timestamp(), tz=timezone.utc).isoformat()
 
     return jsonify({
-        "name":        ngo.get("name") or user.get("name", "NGO"),
+        "name":        ngo.get("org_name") or ngo.get("name") or user.get("name", "NGO"),
         "tagline":     ngo.get("tagline", ""),
         "description": ngo.get("description") or ngo.get("about", ""),
         "image":       ngo.get("logo_url") or user.get("photo_url", ""),
