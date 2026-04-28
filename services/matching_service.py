@@ -65,6 +65,7 @@ MAX_MATCHES_PER_NEED  = 5    # final match docs to write to Firestore
 PRE_SORT_POOL_SIZE    = 25   # max candidates forwarded to Gemini
 DEFAULT_RADIUS_KM     = 30   # fallback if volunteer has no radius set
 GEMINI_MODEL          = "gemini-2.5-flash"   # cheaper, faster, and better at structured output than 2.5 for our use case
+MIN_MATCH_SCORE       = 50   # candidates scoring below this threshold are not matched
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -123,8 +124,11 @@ def run_matching_for_need(need_id: str, need: dict) -> list[str]:
     # Sort by AI score, take top N
     scored.sort(key=lambda v: v["_ai_score"], reverse=True)
     
-    # Filter out irrelevant matches (score <= 10)
-    final = [v for v in scored if v["_ai_score"] > 10][:MAX_MATCHES_PER_NEED]
+    # Filter out weak matches — only create match documents for candidates
+    # that meet or exceed the minimum score threshold (default: 50)
+    final = [v for v in scored if v["_ai_score"] >= MIN_MATCH_SCORE][:MAX_MATCHES_PER_NEED]
+    logger.info(f"[Matching v2] {len(final)} candidates passed the minimum score threshold ({MIN_MATCH_SCORE}).")
+
     # ── 5. Write match documents ──────────────────────────────────────────────
     match_ids = _write_matches(db, need_id, need, final)
 
