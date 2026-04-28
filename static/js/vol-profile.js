@@ -102,7 +102,7 @@ try {
         renderSkills(data.skills || []);
         renderAvailability(data.availability || {});
         renderStats(data);
-        renderAssignments(data.assignments || []);
+        renderContributions(data.contributions || []);
         setupButtons(volunteerId, data);
 
 //     } catch (err) {
@@ -196,11 +196,11 @@ function renderStats(data) {
 
 
 // =========================
-// ASSIGNMENTS
+// CONTRIBUTIONS
 // =========================
-function renderAssignments(list) {
+function renderContributions(list) {
 
-    const container = document.getElementById("assignmentList");
+    const container = document.getElementById("contributionList");
     container.innerHTML = "";
 
     if (!list.length) {
@@ -276,6 +276,21 @@ function setupButtons(volunteerId, data) {
     if (closeBtn) closeBtn.onclick = () => modal.classList.add("hidden");
     if (addSkillBtn) addSkillBtn.onclick = addSkillFromInput;
     if (saveBtn) saveBtn.onclick = () => saveProfile(volunteerId);
+
+    // 4. IMAGE PREVIEW
+    const imageInput = document.getElementById("imageInput");
+    if (imageInput) {
+        imageInput.addEventListener("change", (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    document.getElementById("editImagePreview").src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
 }
 
 function openEditModal(data) {
@@ -285,6 +300,7 @@ function openEditModal(data) {
     document.getElementById("editBio").value = data.bio || "";
     document.getElementById("editSchedule").value = data.availability?.schedule || "Anytime";
     document.getElementById("editRadius").value = data.availability?.radius || 10;
+    document.getElementById("editImagePreview").src = data.image || "https://ui-avatars.com/api/?name=User";
 
     currentSkills = [...(data.skills || [])];
     renderEditSkills();
@@ -325,18 +341,21 @@ async function saveProfile(volunteerId) {
     saveBtn.disabled = true;
     saveBtn.textContent = "Saving...";
 
-    const payload = {
-        bio: document.getElementById("editBio").value,
-        skills: currentSkills,
-        schedule: document.getElementById("editSchedule").value,
-        radius: parseInt(document.getElementById("editRadius").value) || 10
-    };
+    const formData = new FormData();
+    formData.append("bio", document.getElementById("editBio").value);
+    formData.append("skills", JSON.stringify(currentSkills));
+    formData.append("schedule", document.getElementById("editSchedule").value);
+    formData.append("radius", document.getElementById("editRadius").value);
+
+    const imageInput = document.getElementById("imageInput");
+    if (imageInput.files[0]) {
+        formData.append("photo", imageInput.files[0]);
+    }
 
     try {
         const res = await fetch("/api/volunteer/update", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
+            body: formData
         });
         if (res.ok) {
             window.location.reload();

@@ -2162,14 +2162,37 @@ def api_volunteer_profile(uid):
     )
     ngo_ids_assisted = {m.to_dict().get("ngo_id") for m in completed if m.to_dict().get("ngo_id")}
 
-    assignments = []
-    for m in completed[:10]:   # last 10 only for public view
+    contributions = []
+    from datetime import datetime
+    
+    # Sort by updated_at descending
+    sorted_completed = sorted(completed, key=lambda x: x.to_dict().get("updated_at", ""), reverse=True)
+    
+    for m in sorted_completed[:10]:
         mdata = m.to_dict()
-        assignments.append({
-            "title":  mdata.get("title", "Task"),
-            "ngo":    mdata.get("ngo_name", "NGO"),
-            "time":   mdata.get("updated_at", ""),
+        ts = mdata.get("updated_at")
+        time_str = "Recently"
+        if ts:
+            try:
+                if hasattr(ts, 'timestamp'): # Firestore timestamp
+                    dt = ts
+                else:
+                    dt = datetime.fromisoformat(str(ts).replace('Z', '+00:00'))
+                
+                # Simple relative time
+                now = datetime.now(dt.tzinfo) if dt.tzinfo else datetime.now()
+                diff = now - dt
+                if diff.days > 0: time_str = f"{diff.days}d ago"
+                elif diff.seconds > 3600: time_str = f"{diff.seconds//3600}h ago"
+                else: time_str = f"{diff.seconds//60}m ago"
+            except: pass
+
+        contributions.append({
+            "title":  mdata.get("title") or mdata.get("need_title") or "Community Support",
+            "ngo":    mdata.get("ngo_name") or "Local NGO",
+            "time":   time_str,
             "status": "completed",
+            "points": f"+{mdata.get('points', 10)}"
         })
 
     return jsonify({
@@ -2185,7 +2208,7 @@ def api_volunteer_profile(uid):
         "hours_helped":   round(vol.get("totalHours", 0), 1),
         "tasks_completed": vol.get("totalTasks", 0),
         "ngos_assisted":  len(ngo_ids_assisted),
-        "assignments":    assignments,
+        "contributions":   contributions,
         "is_owner":       session.get("user", {}).get("uid") == uid
     })
 
@@ -2197,20 +2220,45 @@ def api_volunteer_update():
         return jsonify({"error": "Unauthorized"}), 401
         
     uid = session["user"]["uid"]
-    data = request.json or {}
+    
+    # Handle both JSON and Form Data (for files)
+    if request.is_json:
+        data = request.json
+        photo = None
+    else:
+        data = request.form
+        photo = request.files.get("photo")
     
     db = firebase_services.get_db()
-    
     update_data = {}
+    
+    # Text fields
     if "bio" in data: update_data["about"] = data["bio"]
-    if "skills" in data: update_data["skills"] = data["skills"]
-    if "radius" in data: update_data["radius"] = data["radius"]
+    if "skills" in data: 
+        # Handle skills list from either JSON or Form
+        skills = data.get("skills")
+        if isinstance(skills, str):
+            import json
+            try: skills = json.loads(skills)
+            except: skills = skills.split(",")
+        update_data["skills"] = skills
+    if "radius" in data: update_data["radius"] = int(data["radius"])
     if "schedule" in data: update_data["availability"] = data["schedule"]
     
+    # Photo upload
+    if photo and photo.filename:
+        result = imagekit_services.upload_volunteer_avatar(uid, photo)
+        if result and result.get("url"):
+            update_data["photo_url"] = result["url"]
+            # Also update user doc and session
+            db.collection("users").document(uid).update({"photo_url": result["url"]})
+            session["user"]["photo_url"] = result["url"]
+            session.modified = True
+
     if update_data:
         db.collection("volunteers").document(uid).update(update_data)
         
-    return jsonify({"success": True})
+    return jsonify({"success": True, "photo_url": update_data.get("photo_url")})
 
 
 @app.route("/api/ngo/<uid>")
