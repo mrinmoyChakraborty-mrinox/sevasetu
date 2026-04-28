@@ -174,3 +174,30 @@ def notify_volunteer_report_rejected(vol_id, need_title, ngo_name):
         }
     )
 
+def notify_ngo_work_started(ngo_id, vol_name, need_title, need_id):
+    """Notify an NGO that a volunteer has started work on a task."""
+    return send_fcm_notification(
+        uid=ngo_id,
+        title="Work Started! 🚧",
+        body=f"{vol_name} has started working on '{need_title}'.",
+        data={
+            "type": "work_started",
+            "need_id": str(need_id or ""),
+            "click_action": f"/need/{need_id}/ngo" if need_id else "/ngo/dashboard"
+        }
+    )
+
+def notify_ngo_work_paused(ngo_id, vol_name, need_title, need_id):
+    """Notify an NGO that a volunteer has paused work on a task."""
+    return send_fcm_notification(
+        uid=ngo_id,
+        title="Work Paused ⏸️",
+        body=f"{vol_name} has paused work on '{need_title}'.",
+        data={
+            "type": "work_paused",
+            "need_id": str(need_id or ""),
+            "click_action": f"/need/{need_id}/ngo" if need_id else "/ngo/dashboard"
+        }
+    )
+
+

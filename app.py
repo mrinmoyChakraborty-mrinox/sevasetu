@@ -812,6 +812,9 @@ def api_volunteer_work_action(task_id):
                 "info",
                 {"match_id": task_id, "need_id": mdata.get("need_id")}
             )
+            notification_service.notify_ngo_work_started(
+                ngo_id, vol_name, need_title, mdata.get("need_id")
+            )
         else:
             add_notification(
                 ngo_id, 
@@ -819,6 +822,9 @@ def api_volunteer_work_action(task_id):
                 f"{vol_name} has paused work on: {need_title}",
                 "warning",
                 {"match_id": task_id, "need_id": mdata.get("need_id")}
+            )
+            notification_service.notify_ngo_work_paused(
+                ngo_id, vol_name, need_title, mdata.get("need_id")
             )
 
     return jsonify({"success": True, "new_status": new_status})
@@ -840,6 +846,29 @@ def api_volunteer_complete_task(task_id):
             proof_url = result.get("url")
 
     firebase_services.volunteer_complete_task(task_id, uid, proof_url)
+
+    # FCM push notification to NGO
+    try:
+        match_doc = firebase_services.get_db().collection("matches").document(task_id).get()
+        if match_doc.exists:
+            mdata     = match_doc.to_dict()
+            ngo_id    = mdata.get("ngo_id")
+            vol_name  = session["user"].get("name", "A volunteer")
+            need_title = mdata.get("title", "a task")
+            if ngo_id:
+                add_notification(
+                    ngo_id,
+                    "Report Submitted",
+                    f"{vol_name} has submitted a completion report for: {need_title}",
+                    "info",
+                    {"match_id": task_id, "need_id": mdata.get("need_id")}
+                )
+                notification_service.notify_ngo_report_submitted(
+                    ngo_id, vol_name, need_title, mdata.get("need_id")
+                )
+    except Exception as _e:
+        logger.error(f"[complete_task] notification error: {_e}")
+
     return jsonify({"success": True})
 
 
@@ -876,6 +905,9 @@ def api_volunteer_work_start():
                 "info",
                 {"match_id": task_id, "need_id": mdata.get("need_id")}
             )
+            notification_service.notify_ngo_work_started(
+                ngo_id, vol_name, need_title, mdata.get("need_id")
+            )
 
     return jsonify({"success": True})
 
@@ -910,6 +942,9 @@ def api_volunteer_work_pause():
                 f"{vol_name} has paused work on: {need_title}",
                 "warning",
                 {"match_id": task_id, "need_id": mdata.get("need_id")}
+            )
+            notification_service.notify_ngo_work_paused(
+                ngo_id, vol_name, need_title, mdata.get("need_id")
             )
 
     return jsonify({"success": True})
