@@ -207,6 +207,7 @@ def api_ngo_dashboard():
         "org_name":          org_name,
         "stats":             stats,
         "recent_needs":      recent_needs,
+        "heatmap_needs":     all_needs,  # can be used for heatmap visualization on frontend
         "suggested_matches": matches,
         "recent_activity":   activity
     })

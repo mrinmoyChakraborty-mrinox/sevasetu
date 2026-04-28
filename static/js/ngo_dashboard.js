@@ -50,9 +50,9 @@ async function loadDashboard() {
     renderMatches(data.suggested_matches);
     renderActivity(data.recent_activity);
 
-    // Wire heatmap with real need locations
-    initHeatmap(data.recent_needs || []);
-    cachedNeeds = data.recent_needs || [];
+    // Wire heatmap with all needs for a true density view
+    initHeatmap(data.heatmap_needs || []);
+    cachedNeeds = data.heatmap_needs || [];
   } catch (err) {
     console.error("Dashboard load error:", err);
     showDashboardError();
@@ -508,39 +508,57 @@ function initHeatmap(needs) {
   });
 
   heatmapInstance.on("load", () => {
-    const geoPoints = needs
+    const features = needs
       .filter(n => n.location?.lat && n.location?.lng)
-      .map(n => ({ lat: n.location.lat, lng: n.location.lng, urgency: n.urgency_score || 5 }));
+      .map(n => ({
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: [n.location.lng, n.location.lat] },
+        properties: { urgency: n.urgency_score || 5 }
+      }));
 
-    // Add urgency-colored pins
-    geoPoints.forEach(pt => {
-      const color = pt.urgency >= 8 ? "#a83639" : pt.urgency >= 5 ? "#855300" : "#006c44";
-      const size  = pt.urgency >= 8 ? 20 : 14;
-
-      const el = document.createElement("div");
-      el.style.cssText = `
-        width:${size}px;height:${size}px;background:${color};
-        border-radius:50%;border:2px solid white;
-        box-shadow:0 0 0 4px ${color}33;
-      `;
-      olaMaps.addMarker({ element: el })
-             .setLngLat([pt.lng, pt.lat])
-             .addTo(heatmapInstance);
+    heatmapInstance.addSource('needs-source', {
+      type: 'geojson',
+      data: { type: 'FeatureCollection', features: features }
     });
 
-    // Try to centre on NGO's location
-    if (navigator.geolocation) {
+    // Add heatmap layer
+    heatmapInstance.addLayer({
+      id: 'needs-heat',
+      type: 'heatmap',
+      source: 'needs-source',
+      maxzoom: 15,
+      paint: {
+        'heatmap-weight': ['interpolate', ['linear'], ['get', 'urgency'], 0, 0, 10, 1],
+        'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 0, 1, 15, 3],
+        'heatmap-color': [
+          'interpolate', ['linear'], ['heatmap-density'],
+          0, 'rgba(0,108,68,0)',
+          0.2, 'rgba(0,108,68,0.5)',
+          0.4, 'rgba(76,175,125,0.7)',
+          0.6, 'rgba(254,166,25,0.8)',
+          0.8, 'rgba(255,107,107,0.9)',
+          1, 'rgba(186,26,26,1)'
+        ],
+        'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 0, 10, 15, 25],
+        'heatmap-opacity': 0.8
+      }
+    });
+
+    // Try to centre on the average location of needs or NGO's location
+    if (features.length > 0) {
+      const avgLng = features.reduce((sum, f) => sum + f.geometry.coordinates[0], 0) / features.length;
+      const avgLat = features.reduce((sum, f) => sum + f.geometry.coordinates[1], 0) / features.length;
+      heatmapInstance.setCenter([avgLng, avgLat]);
+    } else if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(pos => {
         heatmapInstance.setCenter([pos.coords.longitude, pos.coords.latitude]);
       }, () => {});
     }
 
-    // Update the "just now" badge
     const badge = document.getElementById("heatmapUpdate");
     if (badge) badge.textContent = "Live";
 
-    // Update pressure zone count
-    const highPressure = geoPoints.filter(p => p.urgency >= 7).length;
+    const highPressure = needs.filter(n => (n.urgency_score || 0) >= 7).length;
     const zoneEl = document.getElementById("heatmapZoneCount");
     if (zoneEl) zoneEl.textContent = highPressure > 0 ? `${highPressure} High Pressure Zone${highPressure!==1?'s':''}` : "All Clear";
   });
@@ -574,7 +592,6 @@ function initModalHeatmap() {
   if (!container || typeof OlaMaps === "undefined") return;
 
   modalMapLoaded = true;
-
   const olaMaps = new OlaMaps({ apiKey: OLA_MAPS_API_KEY });
 
   modalMapInstance = olaMaps.init({
@@ -582,61 +599,152 @@ function initModalHeatmap() {
     container: "heatmapModalMap",
     center: [77.5946, 12.9716],
     zoom: 11,
-    interactive: true // 🔥 IMPORTANT
+    interactive: true
   });
 
   modalMapInstance.on("load", () => {
-
-    const geoPoints = cachedNeeds
+    const features = cachedNeeds
       .filter(n => n.location?.lat && n.location?.lng)
       .map(n => ({
-        lat: n.location.lat,
-        lng: n.location.lng,
-        urgency: n.urgency_score || 5,
-        title: n.title
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: [n.location.lng, n.location.lat] },
+        properties: { 
+          id: n.id, 
+          title: n.title, 
+          urgency: n.urgency_score || 5,
+          category: n.category || 'General'
+        }
       }));
 
-    geoPoints.forEach(pt => {
-      const color = pt.urgency >= 8 ? "#a83639" :
-                    pt.urgency >= 5 ? "#855300" :
-                                      "#006c44";
+    modalMapInstance.addSource('needs-data', {
+      type: 'geojson',
+      data: { type: 'FeatureCollection', features: features },
+      cluster: true,
+      clusterMaxZoom: 14,
+      clusterRadius: 50
+    });
 
-      const el = document.createElement("div");
-      el.style.cssText = `
-        width:18px;height:18px;background:${color};
-        border-radius:50%;border:2px solid white;
-        box-shadow:0 0 0 6px ${color}33;
-        cursor:pointer;
-      `;
+    // Heatmap layer for density
+    modalMapInstance.addLayer({
+      id: 'heat',
+      type: 'heatmap',
+      source: 'needs-data',
+      maxzoom: 15,
+      paint: {
+        'heatmap-weight': ['interpolate', ['linear'], ['get', 'urgency'], 0, 0, 10, 1],
+        'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 0, 1, 15, 3],
+        'heatmap-color': [
+          'interpolate', ['linear'], ['heatmap-density'],
+          0, 'rgba(0,108,68,0)',
+          0.2, 'rgba(0,108,68,0.5)',
+          0.4, 'rgba(76,175,125,0.7)',
+          0.6, 'rgba(254,166,25,0.8)',
+          0.8, 'rgba(255,107,107,0.9)',
+          1, 'rgba(186,26,26,1)'
+        ],
+        'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 0, 10, 15, 30]
+      }
+    });
 
-      const marker = olaMaps.addMarker({ element: el })
-        .setLngLat([pt.lng, pt.lat])
-        .addTo(modalMapInstance);
+    // Cluster circles
+    modalMapInstance.addLayer({
+      id: 'clusters',
+      type: 'circle',
+      source: 'needs-data',
+      filter: ['has', 'point_count'],
+      paint: {
+        'circle-color': [
+          'step', ['get', 'point_count'],
+          '#006c44', 5,
+          '#fea619', 15,
+          '#ba1a1a'
+        ],
+        'circle-radius': ['step', ['get', 'point_count'], 15, 5, 25, 15, 35],
+        'circle-stroke-width': 3,
+        'circle-stroke-color': '#fff'
+      }
+    });
 
-      // 🔥 Custom Popup interaction
-      const popup = olaMaps.addPopup({ closeButton: false, offset: [0, -12] })
-        .setHTML(`
-          <div style="font-family:'Plus Jakarta Sans',sans-serif; min-width:180px; padding:4px;">
-            <p style="font-weight:700; font-size:0.9rem; margin:0 0 4px; color:#1e293b;">${escHtml(pt.title)}</p>
-            <p style="font-size:0.75rem; color:#64748b; margin:0 0 12px;">Need Location · Urgency: ${pt.urgency}</p>
-            <button onclick="window.location.href='/need/${pt.id}/ngo'" 
-                    style="width:100%; background:#006c44; color:white; border:none; padding:8px; border-radius:8px; font-size:0.75rem; font-weight:700; cursor:pointer; transition:all 0.2s;">
-              View Details
-            </button>
-          </div>
-        `);
+    // Cluster count labels
+    modalMapInstance.addLayer({
+      id: 'cluster-count',
+      type: 'symbol',
+      source: 'needs-data',
+      filter: ['has', 'point_count'],
+      layout: {
+        'text-field': '{point_count}',
+        'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+        'text-size': 12
+      },
+      paint: { 'text-color': '#ffffff' }
+    });
 
-      el.addEventListener("click", () => {
-        popup.setLngLat([pt.lng, pt.lat]).addTo(modalMapInstance);
+    // Individual points (non-clustered)
+    modalMapInstance.addLayer({
+      id: 'unclustered-point',
+      type: 'circle',
+      source: 'needs-data',
+      filter: ['!', ['has', 'point_count']],
+      paint: {
+        'circle-color': [
+          'interpolate', ['linear'], ['get', 'urgency'],
+          0, '#006c44',
+          5, '#fea619',
+          10, '#ba1a1a'
+        ],
+        'circle-radius': 8,
+        'circle-stroke-width': 2,
+        'circle-stroke-color': '#fff'
+      }
+    });
+
+    // Click on cluster
+    modalMapInstance.on('click', 'clusters', (e) => {
+      const features = modalMapInstance.queryRenderedFeatures(e.point, { layers: ['clusters'] });
+      const clusterId = features[0].properties.cluster_id;
+      modalMapInstance.getSource('needs-data').getClusterExpansionZoom(clusterId, (err, zoom) => {
+        if (err) return;
+        modalMapInstance.easeTo({ center: features[0].geometry.coordinates, zoom: zoom });
       });
     });
 
-    // Auto center
-    if (geoPoints.length > 0) {
-      modalMapInstance.setCenter([geoPoints[0].lng, geoPoints[0].lat]);
+    // Popup on point click
+    modalMapInstance.on('click', 'unclustered-point', (e) => {
+      const coordinates = e.features[0].geometry.coordinates.slice();
+      const props = e.features[0].properties;
+
+      while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+        coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+      }
+
+      new OlaMaps.Popup({ offset: [0, -10] })
+        .setLngLat(coordinates)
+        .setHTML(`
+          <div style="padding:12px; min-width:200px; font-family:'Plus Jakarta Sans',sans-serif;">
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+              <span style="padding:4px 8px; border-radius:4px; font-size:10px; font-weight:800; background:${props.urgency >= 8 ? '#fee2e2' : props.urgency >= 5 ? '#fef3c7' : '#dcfce7'}; color:${props.urgency >= 8 ? '#991b1b' : props.urgency >= 5 ? '#92400e' : '#166534'};">
+                URGENCY: ${props.urgency}
+              </span>
+              <span style="font-size:10px; font-weight:600; color:#64748b; text-transform:uppercase;">${props.category}</span>
+            </div>
+            <h4 style="margin:0 0 12px; font-weight:700; color:#1e293b; line-height:1.4;">${props.title}</h4>
+            <a href="/need/${props.id}/ngo" style="display:block; text-align:center; background:#006c44; color:white; padding:8px; border-radius:8px; text-decoration:none; font-size:12px; font-weight:700; transition:all 0.2s; hover:opacity:0.9;">View Full Details</a>
+          </div>
+        `)
+        .addTo(modalMapInstance);
+    });
+
+    modalMapInstance.on('mouseenter', 'clusters', () => modalMapInstance.getCanvas().style.cursor = 'pointer');
+    modalMapInstance.on('mouseleave', 'clusters', () => modalMapInstance.getCanvas().style.cursor = '');
+    modalMapInstance.on('mouseenter', 'unclustered-point', () => modalMapInstance.getCanvas().style.cursor = 'pointer');
+    modalMapInstance.on('mouseleave', 'unclustered-point', () => modalMapInstance.getCanvas().style.cursor = '');
+
+    if (features.length > 0) {
+      const avgLng = features.reduce((sum, f) => sum + f.geometry.coordinates[0], 0) / features.length;
+      const avgLat = features.reduce((sum, f) => sum + f.geometry.coordinates[1], 0) / features.length;
+      modalMapInstance.flyTo({ center: [avgLng, avgLat], zoom: 12 });
     }
 
-    // Initialize Search
     initMapSearch(modalMapInstance);
   });
 }
