@@ -352,3 +352,203 @@
     .legal-links a:hover { color: #1f7a5a; }
 
     .legal-links span { color: #ccc; }
+
+
+    /* ───────────────── RESPONSIVE (Mobile Only) ───────────────── */
+@media (max-width: 1024px) {
+  .container {
+    flex-direction: column;
+    min-height: auto;
+  }
+
+  .left,
+  .right {
+    width: 100%;
+  }
+
+  .left {
+    padding: 40px 28px;
+    min-height: auto;
+  }
+
+  .right {
+    padding: 32px 20px 40px;
+  }
+
+  .left h1 {
+    font-size: 38px;
+  }
+
+  .left > p {
+    max-width: 100%;
+  }
+
+  .community-card {
+    width: 100%;
+    max-width: 420px;
+  }
+
+  .form-box {
+    width: 100%;
+    max-width: 520px;
+  }
+}
+
+@media (max-width: 768px) {
+  .container {
+    flex-direction: column;
+  }
+
+  .left {
+    padding: 28px 20px;
+  }
+
+  .right {
+    padding: 20px 16px 32px;
+  }
+
+  .logo-wrap {
+    margin-bottom: 18px !important;
+  }
+
+  .logo-wrap img:first-child {
+    height: 40px !important;
+  }
+
+  .logo-wrap img:last-child {
+    height: 30px !important;
+  }
+
+  .left h1 {
+    font-size: 30px;
+    line-height: 1.2;
+    margin-bottom: 16px;
+  }
+
+  .left > p {
+    font-size: 14px;
+    line-height: 1.6;
+    margin-bottom: 24px;
+  }
+
+  .community-card {
+    width: 100%;
+    max-width: 100%;
+    border-radius: 16px;
+  }
+
+  .card-animation {
+    height: 170px;
+  }
+
+  .card-footer {
+    padding: 14px 16px;
+  }
+
+  .form-box {
+    width: 100%;
+    max-width: 100%;
+    padding: 28px 20px;
+    border-radius: 20px;
+  }
+
+  .tabs {
+    margin-bottom: 22px;
+  }
+
+  .tabs button {
+    font-size: 13px;
+    padding: 10px 0;
+  }
+
+  .form-box h2 {
+    font-size: 24px;
+  }
+
+  .subtext {
+    font-size: 13px;
+    margin-bottom: 20px;
+  }
+
+  .google-btn {
+    font-size: 14px;
+    padding: 12px;
+  }
+
+  input {
+    padding: 12px 14px;
+    font-size: 14px;
+  }
+
+  .submit-btn {
+    padding: 14px;
+    font-size: 14px;
+  }
+
+  .footer-text,
+  .legal-links {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 480px) {
+  .left {
+    padding: 24px 16px;
+  }
+
+  .right {
+    padding: 16px 12px 24px;
+  }
+
+  .left h1 {
+    font-size: 26px;
+  }
+
+  .left > p {
+    font-size: 13px;
+  }
+
+  .card-animation {
+    height: 150px;
+  }
+
+  .card-video-label {
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    padding: 4px 10px;
+  }
+
+  .form-box {
+    padding: 22px 16px;
+    border-radius: 18px;
+  }
+
+  .form-box h2 {
+    font-size: 22px;
+  }
+
+  .subtext {
+    font-size: 12px;
+  }
+
+  .tabs button {
+    font-size: 12px;
+  }
+
+  .google-btn {
+    font-size: 13px;
+  }
+
+  input {
+    font-size: 13px;
+  }
+
+  .submit-btn {
+    font-size: 13px;
+  }
+
+  .legal-links {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+}

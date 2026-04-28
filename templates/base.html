@@ -85,6 +85,7 @@
 
   <!-- Global Styles -->
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"/>
+  <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
 
   {% block head %}{% endblock %}
 </head>
@@ -94,14 +95,17 @@
              selection:text-on-primary-container
              min-h-screen flex flex-col">
 
+  <!-- Toast Notifications -->
+  <div id="toast-container" class="fixed top-24 right-6 z-[100] flex flex-col gap-3 pointer-events-none"></div>
+
   <!-- Navbar -->
   <header class="fixed top-0 z-50 w-full bg-surface-container-low/80 backdrop-blur-md shadow-[0_20px_40px_rgba(0,108,68,0.06)]">
     <nav class="flex justify-between items-center w-full px-6 py-4 max-w-7xl mx-auto">
 
       <!-- Logo -->
-      <a href="/" class="text-2xl font-bold text-emerald-900 tracking-tighter flex items-center gap-2">
-        <img src="{{ url_for('static', filename='images/logobase.png') }}" alt="SevaSetu Logo" class="h-10 w-auto">
-        SevaSetu
+      <a href="/" class="flex items-center gap-2">
+        <img src="{{ url_for('static', filename='images/only_logo.png') }}" alt="Logo" class="h-10 w-auto">
+        <img src="{{ url_for('static', filename='images/text_logo.png') }}" alt="SevaSetu" class="h-8 w-auto">
       </a>
 
       <!-- Desktop Nav Links -->
@@ -109,8 +113,18 @@
         <a class="{% if request.path == '/' %}text-emerald-700 border-b-2 border-emerald-600 pb-1 font-bold{% else %}text-slate-500 hover:text-emerald-600 transition-colors{% endif %}" href="/">Home</a>
         <a class="{% if request.path == '/discover' %}text-emerald-700 border-b-2 border-emerald-600 pb-1 font-bold{% else %}text-slate-500 hover:text-emerald-600 transition-colors{% endif %}" href="/discover">Discover</a>
         {% if session.get('user') %}
+        {% if session['user'].get('role') %}
         <a class="{% if '/dashboard' in request.path %}text-emerald-700 border-b-2 border-emerald-600 pb-1 font-bold{% else %}text-slate-500 hover:text-emerald-600 transition-colors{% endif %}" href="/{{ session['user']['role'] }}/dashboard">Dashboard</a>
-        <a class="text-slate-500 hover:text-emerald-600 transition-colors" href="/inbox">Inbox</a>
+        {% if session['user']['role'] == 'admin' %}
+        <a class="{% if '/admin/ngos' in request.path %}text-emerald-700 border-b-2 border-emerald-600 pb-1 font-bold{% else %}text-slate-500 hover:text-emerald-600 transition-colors{% endif %}" href="/admin/ngos">NGOs</a>
+        <a class="{% if '/admin/volunteers' in request.path %}text-emerald-700 border-b-2 border-emerald-600 pb-1 font-bold{% else %}text-slate-500 hover:text-emerald-600 transition-colors{% endif %}" href="/admin/volunteers">Volunteers</a>
+        {% endif %}
+
+        {% if session.get('user', {}).get('role') == 'ngo' %}
+        <a class="{% if '/reports' in request.path %}text-emerald-700 border-b-2 border-emerald-600 pb-1 font-bold{% else %}text-slate-500 hover:text-emerald-600 transition-colors{% endif %}" href="/ngo/reports">Reports</a>
+        {% endif %}
+        {% endif %}
+        <a id="topbar-chat-btn" class="text-slate-500 hover:text-emerald-600 transition-colors hidden" href="/inbox">Inbox</a>
         {% endif %}
       </div>
 
@@ -118,13 +132,15 @@
       <div class="flex items-center gap-4">
         {% if session.get('user') %}
         <!-- Notification Bell -->
-        <button class="p-2 text-on-surface-variant hover:bg-emerald-50 rounded-full transition-all duration-200 active:scale-95">
+        <button id="topbar-bell-btn" class="p-2 text-on-surface-variant hover:bg-emerald-50 rounded-full transition-all duration-200 active:scale-95 relative hidden">
           <span class="material-symbols-outlined">notifications</span>
+          <span class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
         </button>
         <!-- Avatar -->
         <a href="/profile">
-          <div class="w-10 h-10 rounded-full overflow-hidden border-2 border-primary-container">
-            <img alt="User profile" src="{{ session['user'].get('photo_url', '') }}" class="w-full h-full object-cover"/>
+          <div class="w-10 h-10 rounded-full overflow-hidden border-2 border-primary-container relative flex items-center justify-center bg-surface-container">
+            <img id="topbar-avatar" alt="User profile" src="{{ session['user'].get('photo_url', '') }}" class="w-full h-full object-cover"/>
+            <span id="topbar-avatar-fallback" class="hidden font-bold text-primary"></span>
           </div>
         </a>
         <!-- Logout -->
@@ -148,7 +164,17 @@
       <a class="block py-2 text-emerald-700 font-bold" href="/">Home</a>
       <a class="block py-2 text-slate-500" href="/discover">Discover</a>
       {% if session.get('user') %}
-      <a class="block py-2 text-slate-500" href="/dashboard">Dashboard</a>
+      {% if session['user'].get('role') %}
+      <a class="block py-2 text-slate-500" href="/{{ session['user']['role'] }}/dashboard">Dashboard</a>
+      {% if session['user']['role'] == 'admin' %}
+      <a class="block py-2 text-slate-500" href="/admin/ngos">NGOs</a>
+      <a class="block py-2 text-slate-500" href="/admin/volunteers">Volunteers</a>
+      {% endif %}
+
+      {% if session.get('user', {}).get('role') == 'ngo' %}
+      <a class="block py-2 text-slate-500" href="/ngo/reports">Reports</a>
+      {% endif %}
+      {% endif %}
       <a class="block py-2 text-slate-500" href="/inbox">Inbox</a>
       <a class="block py-2 text-red-400" href="/logout">Logout</a>
       {% else %}
@@ -163,13 +189,14 @@
   </main>
 
   <!-- Footer -->
-  <footer class="bg-slate-50 border-t border-slate-100">
+  {% block footer %}
+  <footer class="w-full border-t border-emerald-900/10 bg-white mt-auto">
     <div class="flex flex-col md:flex-row justify-between items-center px-8 py-12 max-w-7xl mx-auto space-y-6 md:space-y-0">
 
       <div class="flex flex-col space-y-2 text-center md:text-left">
-        <div class="text-lg font-bold text-emerald-900 tracking-tighter flex items-center gap-2 justify-center md:justify-start">
-          <span class="material-symbols-outlined text-primary text-2xl" style="font-variation-settings: 'FILL' 1;">eco</span>
-          SevaSetu
+        <div class="flex items-center gap-2 justify-center md:justify-start">
+          <img src="{{ url_for('static', filename='images/only_logo.png') }}" alt="Logo" class="h-8 w-auto">
+          <img src="{{ url_for('static', filename='images/text_logo.png') }}" alt="SevaSetu" class="h-6 w-auto">
         </div>
         <p class="text-sm text-slate-500 max-w-xs">Elevated Neighborliness. Building bridges of empathy across the community.</p>
       </div>
@@ -182,14 +209,26 @@
       </div>
 
       <div class="text-sm text-slate-500">
-        © 2024 SevaSetu. Elevated Neighborliness.
+        © 2026 SevaSetu. Elevated Neighborliness.
       </div>
 
     </div>
   </footer>
+  {% endblock %}
 
   <!-- Global Scripts -->
   <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+  {% if session.get('user') %}
+  <script src="{{ url_for('static', filename='js/topbar.js') }}"></script>
+  {% endif %}
+  <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+  <script>
+    AOS.init({
+      duration: 800,
+      once: true,
+      easing: 'ease-out-quad',
+    });
+  </script>
   {% block scripts %}{% endblock %}
 
 </body>

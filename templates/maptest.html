@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>maptest
+    </title>
+</head>
+<body>
+    <div id="map" style="width: 100%; height: 500px;"></div>
+
+</body>
+</html>
+<script src="https://unpkg.com/olamaps-web-sdk@latest/dist/olamaps-web-sdk.umd.js"></script>
+
+<script>
+  async function initMap() {
+    const olaMaps = new OlaMaps({
+      apiKey: "cRtJZjnZnTH4ugwi0vxlaaiW436RH5LRwMNS6F7h"
+    });
+
+    const myMap = await olaMaps.init({
+      style: "https://api.olamaps.io/tiles/vector/v1/styles/default-light-standard/style.json",
+      container: "map",
+      center: [88.393777,22.564984],
+      zoom: 15
+    });
+  }
+  
+
+  initMap();
+</script>

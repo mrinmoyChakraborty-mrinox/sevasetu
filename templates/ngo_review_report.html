@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+
+{% block title %}Review Completion Report | SevaSetu{% endblock %}
+
+{% block head %}
+<style>
+    .star-rating {
+        display: flex;
+        flex-direction: row-reverse;
+        gap: 4px;
+    }
+    .star-rating input {
+        display: none;
+    }
+    .star-rating label {
+        font-size: 2rem;
+        color: #ddd;
+        cursor: pointer;
+        transition: color 0.2s;
+    }
+    .star-rating input:checked ~ label,
+    .star-rating label:hover,
+    .star-rating label:hover ~ label {
+        color: #fea619;
+    }
+    .star-rating label .material-symbols-outlined {
+        font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 48;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="max-w-7xl mx-auto px-6 py-12 pb-32" data-aos="fade-up">
+    <header class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+        <div>
+            <div class="flex items-center gap-3 mb-4">
+                <span class="inline-flex items-center px-4 py-1.5 rounded-full bg-secondary/10 text-secondary text-xs font-bold tracking-widest uppercase">
+                    Submitted for Review
+                </span>
+            </div>
+            <h1 class="text-4xl md:text-5xl font-bold tracking-tight text-on-surface mb-2">Review Completion Report</h1>
+            <p class="text-on-surface-variant max-w-2xl">Validate the impact and resource allocation for the emergency response initiative.</p>
+        </div>
+        <div class="flex flex-wrap gap-3">
+            <button class="flex items-center gap-2 px-6 py-3 rounded-full border-2 border-primary text-primary font-bold hover:bg-primary/5 transition-all">
+                <span class="material-symbols-outlined">mail</span>
+                Message Volunteer
+            </button>
+            <button class="flex items-center gap-2 px-6 py-3 rounded-full border-2 border-secondary text-secondary font-bold hover:bg-secondary/5 transition-all">
+                <span class="material-symbols-outlined">edit_note</span>
+                Request Changes
+            </button>
+            <button id="approveBtn" class="flex items-center gap-2 px-8 py-3 rounded-full primary-gradient-btn text-white font-bold shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all" onclick="openReviewModal()">
+                <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                Approve & Rate
+            </button>
+        </div>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <section class="lg:col-span-8 space-y-8">
+            <div class="bg-white rounded-3xl p-8 shadow-sm border border-slate-100">
+                <h2 class="text-sm font-bold tracking-widest uppercase text-on-surface-variant mb-6">Report Content</h2>
+                <div class="space-y-8">
+                    <div>
+                        <h3 class="text-lg font-bold text-on-surface mb-3">Description</h3>
+                        <p class="text-on-surface-variant leading-relaxed">
+                            {{ report.description if report else "Managed the logistics and distribution of 50 emergency food parcels to displaced families in the western sector." }}
+                        </p>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-on-surface mb-3">Impact Summary</h3>
+                        <p class="text-on-surface-variant leading-relaxed">
+                            {{ report.impact if report else "Successfully delivered enough nutrition to sustain 50 households for approximately 7 days." }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-3xl p-8 shadow-sm border border-slate-100">
+                <h2 class="text-sm font-bold tracking-widest uppercase text-on-surface-variant mb-6">Verification Evidence</h2>
+                <div class="group relative overflow-hidden rounded-2xl aspect-video max-w-md">
+                    <img class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
+                         src="{{ report.proof_url if report.proof_url else 'https://images.unsplash.com/photo-1593113598332-cd288d649433' }}" alt="Evidence"/>
+                    <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <span class="text-white font-bold flex items-center gap-2 cursor-pointer" onclick="window.open('{{ report.proof_url }}', '_blank')">
+                            <span class="material-symbols-outlined">fullscreen</span>
+                            View Full Image
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <aside class="lg:col-span-4 space-y-6">
+            <div class="bg-surface-container-low rounded-3xl p-8 border border-slate-200">
+                <h2 class="text-sm font-bold tracking-widest uppercase text-on-surface-variant mb-8">Submission Details</h2>
+                <div class="space-y-6">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-full overflow-hidden border-2 border-primary">
+                            <img class="w-full h-full object-cover" src="{{ volunteer.photo_url if volunteer.photo_url else 'https://ui-avatars.com/api/?name=' + (volunteer.name|urlencode if volunteer.name else 'V') + '&background=006c44&color=fff' }}" alt="Volunteer"/>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-on-surface-variant tracking-wider uppercase">Volunteer</p>
+                            <p class="font-bold text-primary text-lg">{{ volunteer.name if volunteer.name else "Volunteer" }}</p>
+                        </div>
+                    </div>
+                    <div class="h-px bg-slate-200"></div>
+                    <div>
+                        <p class="text-xs font-bold text-on-surface-variant tracking-wider uppercase mb-1">Need</p>
+                        <p class="font-bold text-on-surface">{{ need.title if need.title else "Emergency Need" }}</p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Approval & Rating Modal -->
+    <div id="reviewModal" class="fixed inset-0 z-[100] hidden items-center justify-center p-6">
+        <div class="absolute inset-0 bg-on-surface/40 backdrop-blur-sm" onclick="closeReviewModal()"></div>
+        <div class="bg-white rounded-[2.5rem] w-full max-w-lg relative z-10 p-10 shadow-2xl overflow-hidden" data-aos="zoom-in">
+            <div class="text-center mb-8">
+                <div class="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <span class="material-symbols-outlined text-4xl text-primary" style="font-variation-settings: 'FILL' 1;">stars</span>
+                </div>
+                <h2 class="text-3xl font-bold text-on-surface">Rate Volunteer</h2>
+                <p class="text-slate-500 mt-2">Share your feedback on {{ volunteer.name if volunteer.name else "the volunteer's" }} work.</p>
+            </div>
+
+            <form id="ratingForm" class="space-y-8">
+                <div class="flex flex-col items-center">
+                    <label class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Performance Rating</label>
+                    <div class="star-rating">
+                        <input type="radio" id="star5" name="rating" value="5" /><label for="star5"><span class="material-symbols-outlined">star</span></label>
+                        <input type="radio" id="star4" name="rating" value="4" /><label for="star4"><span class="material-symbols-outlined">star</span></label>
+                        <input type="radio" id="star3" name="rating" value="3" /><label for="star3"><span class="material-symbols-outlined">star</span></label>
+                        <input type="radio" id="star2" name="rating" value="2" /><label for="star2"><span class="material-symbols-outlined">star</span></label>
+                        <input type="radio" id="star1" name="rating" value="1" /><label for="star1"><span class="material-symbols-outlined">star</span></label>
+                    </div>
+                </div>
+
+                <div class="space-y-3">
+                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Written Review</label>
+                    <textarea id="reviewText" rows="4" class="w-full bg-slate-50 border-none rounded-2xl py-4 px-5 text-sm focus:ring-2 focus:ring-primary/20 transition-all resize-none" 
+                               placeholder="Write a few words about the volunteer's impact..."></textarea>
+                </div>
+
+                <div class="flex gap-4">
+                    <button type="button" class="flex-1 py-4 bg-slate-100 text-slate-600 rounded-2xl font-bold text-sm hover:bg-slate-200 transition-all" onclick="closeReviewModal()">Cancel</button>
+                    <button type="submit" id="submitApprovalBtn" class="flex-[2] py-4 primary-gradient-btn text-white rounded-2xl font-bold text-sm shadow-lg shadow-primary/20 hover:shadow-xl hover:-translate-y-0.5 transition-all">Submit Approval</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const NEED_ID = "{{ need.id }}";
+
+    function openReviewModal() {
+        const modal = document.getElementById('reviewModal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+
+    function closeReviewModal() {
+        const modal = document.getElementById('reviewModal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+
+    document.getElementById('ratingForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const rating = document.querySelector('input[name="rating"]:checked')?.value;
+        const review = document.getElementById('reviewText').value;
+
+        if (!rating) {
+            alert('Please select a rating');
+            return;
+        }
+
+        const btn = document.getElementById('submitApprovalBtn');
+        btn.disabled = true;
+        btn.textContent = 'Submitting...';
+
+        try {
+            const res = await fetch('/api/ngo/report/action', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    need_id: NEED_ID,
+                    action: 'approve',
+                    rating: parseInt(rating),
+                    review: review
+                })
+            });
+
+            if (!res.ok) throw new Error('Failed to approve report');
+
+            const data = await res.json();
+            alert('Mission successfully completed! Thank you for your review.');
+            window.location.href = '/ngo/dashboard';
+        } catch (err) {
+            console.error(err);
+            alert('Error submitting approval. Please try again.');
+            btn.disabled = false;
+            btn.textContent = 'Submit Approval';
+        }
+    });
+</script>
+{% endblock %}

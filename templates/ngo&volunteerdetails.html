@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SevaSetu | {{ need.title }}</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary:       #006c44;
+      --primary-light: #4caf7d;
+      --secondary:     #855300;
+      --tertiary:      #a83639;
+      --surface:       #f8f9ff;
+      --surface-card:  #ffffff;
+      --on-surface:    #121c2a;
+      --on-sv:         #3e4942;
+      --outline:       #bdcabf;
+      --error:         #ba1a1a;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: #f4f7f4;
+      color: var(--on-surface);
+      min-height: 100vh;
+    }
+
+    /* ── NAV ── */
+    .navbar {
+      position: sticky; top: 0; z-index: 50;
+      background: rgba(248,249,255,.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(0,108,68,.06);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 24px;
+      flex-wrap: wrap;
+    }
+    @media (max-width: 480px) {
+      .navbar { padding: 10px 16px; }
+      .nav-brand span { display: none; }
+    }
+    .nav-brand { font-size: 1.25rem; font-weight: 800; color: #064e35; display: flex; align-items: center; gap: 8px; }
+    .nav-links { display: flex; align-items: center; gap: 8px; }
+    .nav-link  { font-size: .875rem; font-weight: 600; color: var(--on-sv); text-decoration: none; padding: 8px 14px; border-radius: 99px; transition: background .15s; }
+    .nav-link:hover { background: rgba(0,108,68,.07); }
+    .avatar-sm { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary); }
+
+    /* ── PAGE WRAPPER ── */
+    .page { max-width: 1100px; margin: 0 auto; padding: 28px 20px 80px; }
+
+    .back-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: .8rem; font-weight: 700; color: var(--on-sv);
+      text-decoration: none; margin-bottom: 24px;
+      opacity: .7; transition: opacity .15s;
+    }
+    .back-link:hover { opacity: 1; }
+
+    /* ── GRID ── */
+    .content-grid {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 24px;
+      align-items: start;
+    }
+    @media (max-width: 768px) { .content-grid { grid-template-columns: 1fr; } }
+
+    /* ── CARD ── */
+    .card {
+      background: var(--surface-card);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 4px 24px rgba(0,108,68,.06);
+      border: 1px solid rgba(0,108,68,.05);
+    }
+    .card + .card { margin-top: 16px; }
+
+    /* ── URGENCY / STATUS BADGES ── */
+    .badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 12px; border-radius: 99px;
+      font-size: .72rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase;
+    }
+    .badge-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    .badge-high    { background: #fde8e8; color: #a83639; }
+    .badge-medium  { background: #fef3c7; color: #855300; }
+    .badge-low     { background: #d1fae5; color: #006c44; }
+    .badge-open    { background: #dbeafe; color: #1d4ed8; }
+    .badge-assigned   { background: #fef3c7; color: #92400e; }
+    .badge-completed  { background: #d1fae5; color: #065f46; }
+    .badge-in_progress { background: #ede9fe; color: #5b21b6; }
+
+    /* ── NEED TITLE AREA ── */
+    .need-title { font-size: 1.6rem; font-weight: 800; line-height: 1.25; margin-bottom: 12px; }
+    .badge-row  { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+
+    .description {
+      font-size: .9rem; color: var(--on-sv); line-height: 1.7;
+      margin-bottom: 20px;
+    }
+
+    .section-label {
+      font-size: .7rem; font-weight: 800; letter-spacing: .08em;
+      text-transform: uppercase; color: var(--on-sv); opacity: .55;
+      margin-bottom: 10px;
+    }
+
+    /* ── SKILLS ── */
+    .skills-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+    .skill-tag {
+      padding: 5px 14px; border-radius: 99px;
+      background: rgba(119,218,164,.2); color: #004d30;
+      font-size: .78rem; font-weight: 700;
+    }
+
+    /* ── INFO CARDS ── */
+    .info-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+    @media (max-width: 600px) { .info-cards { grid-template-columns: 1fr; } }
+
+    .info-card {
+      background: var(--surface); border-radius: 12px; padding: 14px 16px;
+      display: flex; align-items: center; gap: 12px;
+      border: 1px solid rgba(0,108,68,.07);
+    }
+    .info-icon {
+      width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .info-icon-green { background: rgba(0,108,68,.1); color: var(--primary); }
+    .info-icon-amber { background: rgba(133,83,0,.1);  color: var(--secondary); }
+    .info-card-label { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--on-sv); opacity: .5; }
+    .info-card-value { font-size: .9rem; font-weight: 700; color: var(--on-surface); margin-top: 2px; }
+
+    /* ── PROGRESS STEPS ── */
+    .progress-section { margin-top: 8px; }
+    .progress-steps {
+      display: flex; align-items: center;
+      margin-top: 12px;
+      overflow-x: auto;
+      padding-bottom: 10px;
+    }
+    .step { display: flex; flex-direction: column; align-items: center; gap: 6px; flex-shrink: 0; }
+    .step-circle {
+      width: 28px; height: 28px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700;
+      border: 2.5px solid var(--outline);
+      background: white; color: var(--outline);
+      transition: all .3s;
+    }
+    .step.done .step-circle   { background: var(--primary); border-color: var(--primary); color: white; }
+    .step.current .step-circle{ border-color: var(--primary); color: var(--primary); }
+    .step span:last-child { font-size: .65rem; font-weight: 700; color: var(--on-sv); opacity: .6; white-space: nowrap; }
+    .step.done span:last-child { opacity: 1; color: var(--primary); }
+    .step-line { flex: 1; height: 2px; background: var(--outline); margin: 0 4px; }
+    .step-line.done-line { background: var(--primary); }
+
+    /* ── RIGHT COLUMN CARDS ── */
+    .card-title { font-size: .72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--on-sv); opacity: .5; margin-bottom: 14px; }
+
+    /* Volunteer card */
+    .vol-avatar {
+      width: 52px; height: 52px; border-radius: 50%; flex-shrink: 0;
+      object-fit: cover; border: 2.5px solid rgba(0,108,68,.2);
+      background: #e6faf0; display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem; font-weight: 800; color: var(--primary);
+    }
+    .vol-name  { font-size: 1rem; font-weight: 800; margin-bottom: 2px; }
+    .vol-meta  { font-size: .78rem; color: var(--on-sv); opacity: .6; }
+    .vol-skills{ display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .vol-skill { font-size: .68rem; font-weight: 700; padding: 3px 10px; border-radius: 99px; background: rgba(119,218,164,.2); color: #004d30; }
+
+    /* Buttons */
+    .btn {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 12px 18px; border-radius: 12px; border: none; cursor: pointer;
+      font-family: 'Plus Jakarta Sans', sans-serif; font-size: .875rem; font-weight: 700;
+      transition: all .2s; width: 100%;
+    }
+    .btn + .btn { margin-top: 8px; }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+
+    .btn-primary  { background: var(--primary); color: white; }
+    .btn-primary:hover:not(:disabled) { background: #005232; }
+
+    .btn-success  { background: #059669; color: white; }
+    .btn-success:hover:not(:disabled) { background: #047857; }
+
+    .btn-danger   { background: #fee2e2; color: #991b1b; }
+    .btn-danger:hover:not(:disabled) { background: #fecaca; }
+
+    .btn-outline  { background: transparent; color: var(--primary); border: 2px solid rgba(0,108,68,.25); }
+    .btn-outline:hover { background: rgba(0,108,68,.06); }
+
+    .btn-chat     { background: var(--surface); color: var(--primary); border: 1.5px solid rgba(0,108,68,.2); }
+    .btn-chat:hover { background: rgba(0,108,68,.07); }
+
+    /* Skeleton */
+    @keyframes skelPulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    .skel { background: #e2e8f0; border-radius: 8px; animation: skelPulse 1.4s ease infinite; }
+
+    /* Verified card */
+    .verified-card { background: #f0faf5; border: 1px solid rgba(0,108,68,.12); }
+    .verified-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .verified-label { font-size: .72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--primary); }
+    .verified-text { font-size: .82rem; color: var(--on-sv); line-height: 1.6; }
+
+    /* Toast */
+    #toast-wrap { position: fixed; bottom: 24px; right: 24px; z-index: 999; display: flex; flex-direction: column; gap: 10px; }
+
+    /* Modal */
+    .modal-overlay { display: none; position: fixed; inset: 0; z-index: 200; background: rgba(18,28,42,.45); backdrop-filter: blur(6px); align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal-box { background: white; border-radius: 20px; padding: 32px; max-width: 420px; width: 90%; text-align: center; box-shadow: 0 24px 64px rgba(0,0,0,.15); }
+    .modal-icon { font-size: 2.5rem; margin-bottom: 12px; }
+    .modal-title { font-size: 1.2rem; font-weight: 800; margin-bottom: 8px; }
+    .modal-msg { font-size: .875rem; color: var(--on-sv); line-height: 1.6; margin-bottom: 24px; }
+    .modal-actions { display: flex; gap: 10px; }
+    .modal-actions .btn { flex: 1; }
+
+    /* ── WORK TRACKER PANEL ── */
+    .tracker-panel {
+      background: linear-gradient(135deg, #f0faf5 0%, #ffffff 100%);
+      border: 1px solid rgba(0,108,68,.14);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 4px;
+    }
+    .tracker-header { display:flex;align-items:center;gap:8px;margin-bottom:14px; }
+    .tracker-timer-wrap { text-align:center;margin-bottom:14px; }
+    .tracker-clock {
+      font-size: 2.4rem; font-weight: 800; letter-spacing: .04em;
+      color: var(--on-surface); font-variant-numeric: tabular-nums;
+      font-feature-settings: 'tnum';
+      transition: color .3s;
+    }
+    .tracker-clock.running { color: var(--primary); }
+    .tracker-status { font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6e7a71;margin-top:2px; }
+    .tracker-btn {
+      background: var(--primary); color: white;
+      transition: background .2s, transform .1s;
+    }
+    .tracker-btn:hover:not(:disabled) { background:#005232; }
+    .tracker-btn.pausing { background: #d97706; }
+    .tracker-btn:active { transform: scale(.97); }
+    .tracker-milestone { margin-top: 12px; }
+    .tracker-milestone-label { font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--on-sv);opacity:.5;margin-bottom:6px; }
+    .tracker-milestone-input {
+      flex:1;padding:8px 12px;border-radius:10px;border:1.5px solid var(--outline);
+      font-family:'Plus Jakarta Sans',sans-serif;font-size:.82rem;
+      outline:none;transition:border-color .2s;
+    }
+    .tracker-milestone-input:focus { border-color:var(--primary); }
+    .tracker-log-btn {
+      padding:8px 14px;border-radius:10px;background:rgba(0,108,68,.1);
+      color:var(--primary);font-size:.82rem;font-weight:700;flex-shrink:0;width:auto;
+    }
+    .tracker-log-btn:hover { background:rgba(0,108,68,.18); }
+    .tracker-location {
+      display:flex;align-items:center;gap:6px;margin-top:10px;
+      background:rgba(0,108,68,.05);padding:6px 10px;border-radius:8px;
+    }
+    .tracker-log {
+      margin-top:10px;max-height:120px;overflow-y:auto;
+      display:flex;flex-direction:column;gap:6px;
+    }
+    .tracker-log-item {
+      background:white;border:1px solid rgba(0,108,68,.08);border-radius:8px;
+      padding:8px 10px;font-size:.78rem;color:#3e4942;
+    }
+    .tracker-log-item .log-time { font-size:.68rem;color:#6e7a71;margin-top:2px; }
+  </style>
+  <script src="https://www.unpkg.com/olamaps-web-sdk@latest/dist/olamaps-web-sdk.umd.js"></script>
+</head>
+<body>
+
+  <!-- Hidden data for JS -->
+  <input type="hidden" id="needId"   value="{{ need.id }}">
+  <input type="hidden" id="userRole" value="{{ role }}">
+  <input type="hidden" id="userId"   value="{{ user.uid }}">
+
+  <!-- NAV -->
+  <nav class="navbar">
+    <div class="nav-brand">
+      <span class="material-symbols-outlined" style="color:var(--primary);font-variation-settings:'FILL' 1">volunteer_activism</span>
+      SevaSetu
+    </div>
+    <div class="nav-links">
+      <a href="/{{ role }}/dashboard" class="nav-link">Dashboard</a>
+      <a href="/inbox" class="nav-link">Inbox</a>
+      <img src="{{ user.photo_url or 'https://ui-avatars.com/api/?name=' + user.name }}"
+           class="avatar-sm" alt="{{ user.name }}"/>
+    </div>
+  </nav>
+
+  <!-- CONFIRM MODAL -->
+  <div class="modal-overlay" id="confirmModal">
+    <div class="modal-box">
+      <div class="modal-icon" id="modalIcon">⚠️</div>
+      <h3 class="modal-title" id="modalTitle">Confirm Action</h3>
+      <p class="modal-msg" id="modalMsg">Are you sure?</p>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="closeConfirmModal()">Cancel</button>
+        <button class="btn btn-danger"  id="modalConfirmBtn">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div id="toast-wrap"></div>
+
+  <div class="page">
+    <a href="/{{ role }}/dashboard" class="back-link">
+      <span class="material-symbols-outlined" style="font-size:16px">arrow_back</span>
+      Back to Dashboard
+    </a>
+
+    <div class="content-grid">
+
+      <!-- ══ LEFT COLUMN ══ -->
+      <div>
+        <div class="card">
+          <!-- Title + badges -->
+          <h1 class="need-title">{{ need.title }}</h1>
+          <div class="badge-row">
+            {% set ul = need.urgency_label | upper if need.urgency_label else 'MEDIUM' %}
+            {% set urgency_cls = 'badge-high' if need.urgency_score >= 7 else ('badge-medium' if need.urgency_score >= 4 else 'badge-low') %}
+            <span class="badge {{ urgency_cls }}">
+              <span class="badge-dot"></span>{{ ul }} URGENCY
+            </span>
+            <span class="badge" style="background:#f0faf5;color:#006c44;">{{ need.category }}</span>
+            {% set s = need.status %}
+            {% set display_status = 'POSTED' if s == 'open' else ('PROGRESSING' if s in ['assigned', 'in_progress'] else (s.upper().replace('_', ' ') if s else 'POSTED')) %}
+            {% set status_cls = 'badge-open' if s == 'open' else ('badge-in_progress' if s in ['assigned', 'in_progress'] else ('badge-completed' if s == 'completed' else 'badge-open')) %}
+            <span class="badge {{ status_cls }}">
+              <span class="badge-dot"></span>
+              {{ display_status }}
+            </span>
+          </div>
+
+          <p class="description">{{ need.description }}</p>
+
+          <!-- Skills -->
+          {% if need.required_skills %}
+          <p class="section-label">Skills Needed</p>
+          <div class="skills-row">
+            {% for skill in need.required_skills %}
+              <span class="skill-tag">{{ skill }}</span>
+            {% endfor %}
+          </div>
+          {% endif %}
+
+          <!-- Info cards -->
+          <div class="info-cards">
+            <div class="info-card">
+              <div class="info-icon info-icon-green">
+                <span class="material-symbols-outlined">location_on</span>
+              </div>
+              <div>
+                <div class="info-card-label">Location</div>
+                <div class="info-card-value">
+                  {% if need.location is mapping %}
+                    {{ need.location.city or "TBD" }}
+                  {% else %}
+                    {{ need.location or "TBD" }}
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+            <div class="info-card">
+              <div class="info-icon info-icon-amber">
+                <span class="material-symbols-outlined">groups</span>
+              </div>
+              <div>
+                <div class="info-card-label">Beneficiaries</div>
+                <div class="info-card-value">{{ need.estimated_people or "TBD" }}</div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Progress Steps -->
+          <p class="section-label">Fulfillment Progress</p>
+          <div class="progress-steps">
+            {% set posted_done   = need.status in ['assigned','in_progress','completed'] %}
+            {% set assigned_done = need.status in ['in_progress','completed'] %}
+            {% set progress_done = need.status == 'completed' %}
+            {% set current_step  = 'posted' if need.status == 'open' else ('assigned' if need.status == 'assigned' else ('in_progress' if need.status == 'in_progress' else 'completed')) %}
+
+            <div class="step {{ 'done' if posted_done else 'current' }}">
+              <div class="step-circle">{% if posted_done %}<span class="material-symbols-outlined" style="font-size:14px">check</span>{% endif %}</div>
+              <span>Posted</span>
+            </div>
+            <div class="step-line {{ 'done-line' if posted_done }}"></div>
+            <div class="step {{ 'done' if assigned_done else ('current' if need.status == 'assigned' else 'upcoming') }}">
+              <div class="step-circle">{% if assigned_done %}<span class="material-symbols-outlined" style="font-size:14px">check</span>{% endif %}</div>
+              <span>Assigned</span>
+            </div>
+            <div class="step-line {{ 'done-line' if assigned_done }}"></div>
+            <div class="step {{ 'done' if progress_done else ('current' if need.status == 'in_progress' else 'upcoming') }}">
+              <div class="step-circle">{% if progress_done %}<span class="material-symbols-outlined" style="font-size:14px">check</span>{% endif %}</div>
+              <span>In Progress</span>
+            </div>
+            <div class="step-line {{ 'done-line' if progress_done }}"></div>
+            <div class="step {{ 'done current' if need.status == 'completed' else 'upcoming' }}">
+              <div class="step-circle">{% if need.status == 'completed' %}<span class="material-symbols-outlined" style="font-size:14px">check</span>{% endif %}</div>
+              <span>Done</span>
+            </div>
+          </div>
+
+          <!-- Activity Logs -->
+          {% if match and match.work_logs %}
+          <p class="section-label" style="margin-top:24px;">Activity History</p>
+          <div class="tracker-log" style="max-height: 400px; overflow-y: auto;">
+            {% for log in match.work_logs %}
+            <div class="tracker-log-item">
+              <div>{{ log.comment }}</div>
+              <div class="log-time">
+                {% if log.timestamp and log.timestamp.strftime %}
+                  {{ log.timestamp.strftime('%H:%M · %d %b') }}
+                {% elif log.timestamp and log.timestamp.seconds %}
+                  {# Handle Firestore Timestamp objects if passed raw #}
+                  {{ log.timestamp.seconds | time_ago }}
+                {% else %}
+                  {{ log.timestamp }}
+                {% endif %}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- ══ RIGHT COLUMN ══ -->
+      <div id="rightCol">
+        <!-- Skeleton shown while JS loads details -->
+        <div class="card" id="actionCard">
+          <div style="height:180px;display:flex;align-items:center;justify-content:center;">
+            <div style="width:32px;height:32px;border-radius:50%;border:3px solid var(--primary);border-top-color:transparent;animation:spin .8s linear infinite;"></div>
+          </div>
+        </div>
+
+        {% if role == 'volunteer' and need.ngo_verified %}
+        <!-- Verified NGO card -->
+        <div class="card verified-card">
+          <div class="verified-header">
+            <span class="material-symbols-outlined" style="color:var(--primary);font-size:18px;font-variation-settings:'FILL' 1">verified_user</span>
+            <span class="verified-label">Verified NGO</span>
+          </div>
+          <p class="verified-text">This mission is posted by a verified organisation on SevaSetu. Coordination is monitored for safety.</p>
+        </div>
+        {% endif %}
+      </div>
+
+    </div>
+  </div>
+
+  <style>
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+
+  <script>
+    // ── Data from Jinja ───────────────────────────────────────
+    const NEED_ID   = document.getElementById("needId").value;
+    const USER_ROLE = document.getElementById("userRole").value;
+    const USER_ID   = document.getElementById("userId").value;
+    const NEED_STATUS = "{{ need.status }}";
+    const ASSIGNED_VOL_ID = "{{ need.assigned_volunteer_id or '' }}";
+    const NGO_ID    = "{{ need.ngo_id or '' }}";
+    
+    // Add this to store the Match ID context
+    let MATCH_ID = null;
+
+    // ── Boot ──────────────────────────────────────────────────
+    document.addEventListener("DOMContentLoaded", loadDetails);
+
+    async function loadDetails() {
+      try {
+        const resp = await fetch(`/api/need/${NEED_ID}`);
+        if (!resp.ok) throw new Error("Failed");
+        const data = await resp.json();
+        renderActionCard(data.need, data.assigned_volunteer);
+      } catch (err) {
+        console.error("loadDetails:", err);
+        document.getElementById("actionCard").innerHTML = `
+          <p style="text-align:center;color:#a83639;font-weight:600;">Failed to load details</p>
+          <button class="btn btn-outline" style="margin-top:12px;" onclick="loadDetails()">Retry</button>`;
+      }
+    }
+
+    // ── Render the right-column action card ──────────────────
+    function renderActionCard(need, assignedVol) {
+      const card = document.getElementById("actionCard");
+      const status   = need.status || "open";
+      const isMyTask = USER_ROLE === "volunteer" && need.assigned_volunteer_id === USER_ID;
+
+      // ── NGO view ─────────────────────────────────────────
+      if (USER_ROLE === "ngo") {
+        let html = `<p class="card-title">Need Management</p>`;
+
+        if (status === "in_review") {
+          html += `
+            <div style="text-align:center;padding:20px 0;">
+              <span class="material-symbols-outlined" style="font-size:3rem;color:var(--secondary);display:block;margin-bottom:8px;">assignment_late</span>
+              <p style="font-weight:700;color:var(--secondary);">Report Submitted</p>
+              <p style="font-size:.8rem;color:#6e7a71;margin-top:4px;">The volunteer has submitted a completion report.</p>
+              <a href="/ngo/report/review/${NEED_ID}" class="btn btn-primary" style="margin-top:16px;text-decoration:none;">
+                <span class="material-symbols-outlined" style="font-size:18px">visibility</span>
+                See Completion Report
+              </a>
+            </div>`;
+        } else if (status === "completed") {
+          html += `
+            <div style="text-align:center;padding:20px 0;">
+              <span class="material-symbols-outlined" style="font-size:3rem;color:#059669;display:block;margin-bottom:8px;font-variation-settings:'FILL' 1">task_alt</span>
+              <p style="font-weight:700;color:#059669;">Task Completed</p>
+              <p style="font-size:.8rem;color:#6e7a71;margin-top:4px;margin-bottom:16px;">This mission was successfully fulfilled.</p>
+              <a href="/ngo/report/review/${NEED_ID}" class="btn btn-outline" style="text-decoration:none;">
+                <span class="material-symbols-outlined" style="font-size:18px">visibility</span>
+                View Completion Report
+              </a>
+            </div>`;
+        } else if (assignedVol) {
+          // Show assigned volunteer
+          const photo = assignedVol.photo_url
+            ? `<img src="${esc(assignedVol.photo_url)}" class="vol-avatar" style="width:52px;height:52px;border-radius:50%;object-fit:cover;" alt="${esc(assignedVol.name)}">`
+            : `<div class="vol-avatar">${(assignedVol.name||"V")[0].toUpperCase()}</div>`;
+
+          const skills = (assignedVol.skills||[]).slice(0,3)
+            .map(s => `<span class="vol-skill">${esc(s)}</span>`).join("");
+
+          html += `
+            <p class="section-label" style="margin-bottom:12px;">Assigned Volunteer</p>
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+              ${photo}
+              <div>
+                <div class="vol-name">${esc(assignedVol.name)}</div>
+                <div class="vol-meta">
+                  ${assignedVol.rating > 0 ? `⭐ ${Number(assignedVol.rating).toFixed(1)}` : "New volunteer"}
+                </div>
+                <div class="vol-skills">${skills}</div>
+              </div>
+            </div>
+            <button class="btn btn-chat" onclick="chatWithVolunteer()">
+              <span class="material-symbols-outlined" style="font-size:18px">chat</span>
+              Chat with Volunteer
+            </button>
+
+            <!-- NGO Live Tracking Map -->
+            <div id="ngoLiveMapWrap" style="margin-top:14px; display:none;">
+              <p class="section-label" style="margin-bottom:8px;">Live Volunteer Location</p>
+              <div id="ngoLiveMap" style="height:180px; width:100%; border-radius:12px; border:1px solid rgba(0,108,68,.1);"></div>
+              <p id="ngoLiveStatus" style="font-size:.7rem; color:#6e7a71; margin-top:6px; text-align:center;">Fetching location...</p>
+            </div>
+
+            <button class="btn btn-danger" style="margin-top:8px;" onclick="confirmUnassign()">
+              <span class="material-symbols-outlined" style="font-size:18px">person_remove</span>
+              Unassign Volunteer
+            </button>`;
+
+          // Start polling for location if task is in progress
+          if (status === 'in_progress') {
+            setTimeout(() => {
+              document.getElementById('ngoLiveMapWrap').style.display = 'block';
+              initNgoLiveMap();
+            }, 100);
+          }
+        } else if (status === "open") {
+          html += `
+            <div style="text-align:center;padding:20px 0;">
+              <span class="material-symbols-outlined" style="font-size:3rem;color:#bdcabf;display:block;margin-bottom:8px;">person_search</span>
+              <p style="font-weight:700;color:#3e4942;">No volunteer assigned yet</p>
+              <p style="font-size:.8rem;color:#6e7a71;margin-top:4px;">AI is matching volunteers — check the dashboard for suggestions.</p>
+            </div>`;
+        }
+
+        card.innerHTML = html;
+        return;
+      }
+
+      // ── Volunteer view ────────────────────────────────────
+      let html = `<p class="card-title">Task Actions</p>`;
+
+      if (status === "open") {
+        // Available to accept
+        html += `
+          <button class="btn btn-primary" id="acceptBtn" onclick="acceptTask()">
+            <span class="material-symbols-outlined" style="font-size:18px">check_circle</span>
+            Accept This Task
+          </button>
+          <button class="btn btn-chat" style="margin-top:8px;" onclick="chatWithNgo()">
+            <span class="material-symbols-outlined" style="font-size:18px">chat</span>
+            Chat with NGO
+          </button>`;
+
+      } else if (isMyTask) {
+        // This volunteer is the assigned one
+        if (status === "assigned" || status === "in_progress") {
+          html += `
+            <!-- ── WORK TRACKER PANEL ── -->
+            <div class="tracker-panel" id="trackerPanel">
+              <div class="tracker-header">
+                <span class="material-symbols-outlined" style="color:var(--primary);font-size:20px;font-variation-settings:'FILL' 1">timer</span>
+                <span style="font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--on-sv);opacity:.5;">Work Tracker</span>
+              </div>
+
+              <!-- Timer display -->
+              <div class="tracker-timer-wrap">
+                <div class="tracker-clock" id="trackerClock">00:00:00</div>
+                <div class="tracker-status" id="trackerStatus">Not started</div>
+              </div>
+
+              <!-- Start / Pause toggle -->
+              <button class="btn tracker-btn" id="trackerToggleBtn" onclick="toggleWorkSession()">
+                <span class="material-symbols-outlined" style="font-size:18px" id="trackerBtnIcon">play_arrow</span>
+                <span id="trackerBtnLabel">Start Work</span>
+              </button>
+
+              <!-- Milestone comment -->
+              <div class="tracker-milestone" id="trackerMilestoneWrap" style="display:none;">
+                <div class="tracker-milestone-label">Add Milestone Note</div>
+                <div style="display:flex;gap:8px;">
+                  <input type="text" id="milestoneInput" placeholder="e.g. Distributed food packets…" class="tracker-milestone-input"/>
+                  <button class="btn tracker-log-btn" onclick="logMilestone()">Log</button>
+                </div>
+              </div>
+
+              <!-- Location status -->
+              <div class="tracker-location" id="trackerLocation" style="display:none;">
+                <span class="material-symbols-outlined" style="font-size:14px;color:var(--primary);">location_on</span>
+                <span id="trackerLocationText" style="font-size:.75rem;color:#3e4942;">Acquiring location…</span>
+              </div>
+
+              <!-- Milestone log -->
+              <div class="tracker-log" id="trackerLog"></div>
+            </div>
+
+            <!-- Complete + Chat -->
+            <a href="/volunteer/task/complete/${NEED_ID}" class="btn btn-success" style="text-decoration:none;margin-top:10px;">
+              <span class="material-symbols-outlined" style="font-size:18px">task_alt</span>
+              Mark as Complete
+            </a>
+            <button class="btn btn-chat" style="margin-top:8px;" onclick="chatWithNgo()">
+              <span class="material-symbols-outlined" style="font-size:18px">chat</span>
+              Chat with NGO
+            </button>`;
+
+          // Boot tracker after card renders
+          setTimeout(initTracker, 50);
+        } else if (status === "in_review") {
+          html += `
+            <div style="text-align:center;padding:20px 0;">
+              <span class="material-symbols-outlined" style="font-size:3rem;color:var(--secondary);display:block;margin-bottom:8px;">history_edu</span>
+              <p style="font-weight:700;color:var(--secondary);">Under Review</p>
+              <p style="font-size:.8rem;color:#6e7a71;margin-top:4px;">Your completion report is being reviewed by the NGO.</p>
+              <button class="btn btn-chat" style="margin-top:16px;" onclick="chatWithNgo()">
+                <span class="material-symbols-outlined" style="font-size:18px">chat</span>
+                Chat with NGO
+              </button>
+            </div>`;
+        } else if (status === "completed") {
+          html += `
+            <div style="text-align:center;padding:20px 0;">
+              <span class="material-symbols-outlined" style="font-size:3rem;color:#059669;display:block;margin-bottom:8px;font-variation-settings:'FILL' 1">task_alt</span>
+              <p style="font-weight:800;color:#059669;font-size:1rem;">Task Completed!</p>
+              <p style="font-size:.8rem;color:#3e4942;margin-top:6px;margin-bottom:16px;">Thank you for your contribution.</p>
+              <a href="/ngo/report/review/${NEED_ID}" class="btn btn-outline" style="text-decoration:none;">
+                <span class="material-symbols-outlined" style="font-size:18px">visibility</span>
+                View Your Report
+              </a>
+            </div>`;
+        }
+
+      } else if (need.assigned_volunteer_id && !isMyTask) {
+        // Another volunteer is assigned
+        html += `
+          <div style="text-align:center;padding:20px 0;">
+            <span class="material-symbols-outlined" style="font-size:3rem;color:#bdcabf;display:block;margin-bottom:8px">person_check</span>
+            <p style="font-weight:700;color:#3e4942;">Already Assigned</p>
+            <p style="font-size:.8rem;color:#6e7a71;margin-top:4px;">Another volunteer is handling this need.</p>
+          </div>`;
+      }
+
+      card.innerHTML = html;
+    }
+
+    // ── Actions ───────────────────────────────────────────────
+    async function acceptTask() {
+      // Find the match id first (from matched tasks)
+      const btn = document.getElementById("acceptBtn");
+      if (btn) { btn.disabled = true; btn.textContent = "Accepting..."; }
+
+      try {
+        // Get the match id for this need + volunteer
+        const matchResp = await fetch(`/api/volunteer/match-for-need/${NEED_ID}`);
+        if (!matchResp.ok) throw new Error("Match not found — you may not have been matched yet.");
+        const { match_id } = await matchResp.json();
+
+        const res = await fetch(`/api/volunteer/task/${match_id}/accept`, { method: "POST" });
+        if (!res.ok) throw new Error("Accept failed");
+
+        showToast("Task accepted! The NGO has been notified. ✅", "success");
+        setTimeout(() => window.location.reload(), 1500);
+      } catch (err) {
+        showToast(err.message || "Failed to accept. Please try again.", "error");
+        if (btn) { btn.disabled = false; btn.textContent = "Accept This Task"; }
+      }
+    }
+
+    async function chatWithNgo() {
+      try {
+        const res = await fetch(`/api/chat/start-with-ngo/${NEED_ID}`, { method: "POST" });
+        const data = await res.json();
+        if (data.success) window.location.href = `/inbox?conv_id=${data.conversation_id}`;
+        else showToast("Could not start chat.", "error");
+      } catch { showToast("Chat error.", "error"); }
+    }
+
+    async function chatWithVolunteer() {
+      try {
+        const res = await fetch(`/api/chat/start-with-vol/${NEED_ID}`, { method: "POST" });
+        const data = await res.json();
+        if (data.success) window.location.href = `/inbox?conv_id=${data.conversation_id}`;
+        else showToast("Could not start chat.", "error");
+      } catch { showToast("Chat error.", "error"); }
+    }
+
+    function confirmUnassign() {
+      openConfirmModal({
+        icon:    "⚠️",
+        title:   "Unassign Volunteer?",
+        msg:   "This will release the volunteer from this task and set the need back to Open. The AI will re-match.",
+        btnText: "Yes, Unassign",
+        btnCls:  "btn-danger",
+        onConfirm: doUnassign,
+      });
+    }
+
+    async function doUnassign() {
+      closeConfirmModal();
+      try {
+        const res = await fetch(`/api/ngo/need/${NEED_ID}/unassign`, { method: "POST" });
+        if (!res.ok) throw new Error("Unassign failed");
+        showToast("Volunteer unassigned. Need is now open again.", "success");
+        setTimeout(() => window.location.reload(), 1500);
+      } catch (err) {
+        showToast(err.message || "Failed to unassign.", "error");
+      }
+    }
+
+    // ── Confirm Modal ─────────────────────────────────────────
+    function openConfirmModal({ icon, title, msg, btnText, btnCls, onConfirm }) {
+      document.getElementById("modalIcon").textContent    = icon;
+      document.getElementById("modalTitle").textContent   = title;
+      document.getElementById("modalMsg").textContent     = msg;
+      const btn = document.getElementById("modalConfirmBtn");
+      btn.textContent = btnText;
+      btn.className   = `btn ${btnCls}`;
+      btn.onclick     = onConfirm;
+      document.getElementById("confirmModal").classList.add("open");
+    }
+
+    function closeConfirmModal() {
+      document.getElementById("confirmModal").classList.remove("open");
+    }
+
+    document.getElementById("confirmModal").addEventListener("click", function(e) {
+      if (e.target === this) closeConfirmModal();
+    });
+
+    // ── Toast ─────────────────────────────────────────────────
+    function showToast(msg, type = "success") {
+      const el = document.createElement("div");
+      el.style.cssText = `background:white;border-left:4px solid ${type==="success"?"#006c44":"#ba1a1a"};border-radius:.75rem;padding:14px 18px;box-shadow:0 8px 32px rgba(0,0,0,.12);font-size:.875rem;font-weight:600;max-width:320px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;color:#121c2a;`;
+      el.textContent = msg;
+      el.onclick = () => el.remove();
+      document.getElementById("toast-wrap").appendChild(el);
+      setTimeout(() => { el.style.opacity="0"; el.style.transition="opacity .3s"; setTimeout(()=>el.remove(),300); }, 4500);
+    }
+
+    function esc(s) {
+      return String(s||"").replace(/[&<>"']/g, m => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+    }
+    // ══════════════════════════════════════════════════
+    // WORK TRACKER — Firebase Synced Timer + Live Location
+    // ══════════════════════════════════════════════════
+    let _timerInterval  = null;
+    let _elapsedSeconds = 0;
+    let _isRunning      = false;
+    let _sessionStartEpoch = null; 
+    let _locationWatchId = null;
+    let _locationQueue  = [];      
+    let _lastLat = null, _lastLng = null;
+    const LOC_THRESHOLD_KM = 0.1;  
+
+    function _haversine(lat1, lng1, lat2, lng2) {
+      const R = 6371, dLat = (lat2-lat1)*Math.PI/180, dLng = (lng2-lng1)*Math.PI/180;
+      const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    }
+
+    function _fmt(s) {
+      const h = String(Math.floor(s/3600)).padStart(2,'0');
+      const m = String(Math.floor((s%3600)/60)).padStart(2,'0');
+      const sc = String(s%60).padStart(2,'0');
+      return `${h}:${m}:${sc}`;
+    }
+
+    function initTracker() {
+      fetch(`/api/need/${NEED_ID}`)
+        .then(res => res.json())
+        .then(data => {
+            const need = data.need;
+            if (!need) return;
+
+            if (need.match_id) MATCH_ID = need.match_id;
+
+            let totalMs = need.total_work_ms || 0;
+            _elapsedSeconds = Math.floor(totalMs / 1000);
+            
+            if (need.work_status === 'working' && need.current_session_start) {
+                const startMs = need.current_session_start * 1000;
+                const nowMs = Date.now();
+                if (nowMs > startMs) {
+                    _elapsedSeconds += Math.floor((nowMs - startMs) / 1000);
+                }
+                _sessionStartEpoch = startMs;
+                _startTimer(false); 
+            }
+            _updateClockUI();
+        })
+        .catch(err => console.error("Error initializing tracker:", err));
+    }
+
+    async function toggleWorkSession() {
+      const btn = document.getElementById("trackerToggleBtn");
+      
+      if (!MATCH_ID) {
+          try {
+              const mRes = await fetch(`/api/volunteer/match-for-need/${NEED_ID}`);
+              const mData = await mRes.json();
+              if (mData.match_id) MATCH_ID = mData.match_id;
+          } catch(e) { }
+      }
+
+      if (!MATCH_ID) {
+          showToast("Task context missing. Please refresh.", "error");
+          return;
+      }
+
+      btn.disabled = true;
+
+      if (!_isRunning) {
+        try {
+          const res = await fetch("/api/volunteer/work/start", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ task_id: MATCH_ID }) 
+          });
+          if (!res.ok) throw new Error("Server error");
+          
+          _sessionStartEpoch = Date.now();
+          _startTimer(true); 
+          showToast("Work session started ✅", "success");
+        } catch (err) {
+          console.error(err);
+          showToast("Could not start session", "error");
+        }
+      } else {
+        const sessionDurationMs = Date.now() - _sessionStartEpoch;
+        try {
+          const res = await fetch("/api/volunteer/work/pause", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ task_id: MATCH_ID, duration_ms: sessionDurationMs, comment: "Paused via tracker" }) 
+          });
+          if (!res.ok) throw new Error("Server error");
+          
+          _pauseTimer();
+          showToast("Session paused", "success");
+        } catch (err) {
+          console.error(err);
+          showToast("Could not pause session", "error");
+        }
+      }
+      btn.disabled = false;
+    }
+
+    function _startTimer(isNewSession) {
+      _isRunning = true;
+      document.getElementById("trackerClock").classList.add("running");
+      
+      const btn = document.getElementById("trackerToggleBtn");
+      const icon = document.getElementById("trackerBtnIcon");
+      const label = document.getElementById("trackerBtnLabel");
+      
+      if (btn) {
+          icon.textContent = "pause";
+          label.textContent = "Pause Work";
+          btn.classList.add("pausing");
+          document.getElementById("trackerStatus").textContent = "Session active";
+          document.getElementById("trackerMilestoneWrap").style.display = "block";
+          document.getElementById("trackerLocation").style.display = "flex";
+      }
+
+      _startLocationSync();
+
+      _timerInterval = setInterval(() => {
+        _elapsedSeconds++;
+        _updateClockUI();
+      }, 1000);
+    }
+
+    function _pauseTimer() {
+      _isRunning = false;
+      clearInterval(_timerInterval);
+      _timerInterval = null;
+      document.getElementById("trackerClock").classList.remove("running");
+
+      const btn = document.getElementById("trackerToggleBtn");
+      const icon = document.getElementById("trackerBtnIcon");
+      const label = document.getElementById("trackerBtnLabel");
+
+      if (btn) {
+          icon.textContent  = "play_arrow";
+          label.textContent = "Resume Work";
+          btn.classList.remove("pausing");
+          document.getElementById("trackerStatus").textContent = "Paused";
+      }
+
+      _stopLocationSync();
+    }
+
+    function _updateClockUI() {
+      const el = document.getElementById("trackerClock");
+      if (el) el.textContent = _fmt(_elapsedSeconds);
+    }
+
+    async function logMilestone() {
+      const input = document.getElementById("milestoneInput");
+      const comment = input?.value.trim();
+      if (!comment) { showToast("Please enter a milestone comment.", "error"); return; }
+      
+      if (!MATCH_ID) {
+          try {
+              const mRes = await fetch(`/api/volunteer/match-for-need/${NEED_ID}`);
+              const mData = await mRes.json();
+              if (mData.match_id) MATCH_ID = mData.match_id;
+          } catch(e) {}
+      }
+      if (!MATCH_ID) return;
+
+      try {
+        const res = await fetch("/api/volunteer/work/log", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ task_id: MATCH_ID, comment }) 
+        });
+      } catch {}
+
+      const log  = document.getElementById("trackerLog");
+      const item = document.createElement("div");
+      item.className = "tracker-log-item";
+      const now = new Date();
+      item.innerHTML = `<div>${esc(comment)}</div><div class="log-time">${_fmt(_elapsedSeconds)} · ${now.toLocaleTimeString()}</div>`;
+      log.prepend(item);
+      input.value = "";
+      showToast("Milestone logged ✅", "success");
+    }
+
+    function _startLocationSync() {
+      if (!navigator.geolocation) return;
+      _locationWatchId = navigator.geolocation.watchPosition(
+        (pos) => syncLocation(pos.coords.latitude, pos.coords.longitude),
+        (err) => console.warn("Geo error:", err),
+        { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 }
+      );
+      _flushLocationQueue();
+    }
+
+    function _stopLocationSync() {
+      if (_locationWatchId !== null) {
+        navigator.geolocation.clearWatch(_locationWatchId);
+        _locationWatchId = null;
+      }
+    }
+
+    async function syncLocation(lat, lng) {
+      if (!MATCH_ID) {
+          try {
+              const mRes = await fetch(`/api/volunteer/match-for-need/${NEED_ID}`);
+              const mData = await mRes.json();
+              if (mData.match_id) MATCH_ID = mData.match_id;
+          } catch(e) {}
+      }
+      if (!MATCH_ID) return;
+
+      if (_lastLat !== null && _haversine(_lastLat, _lastLng, lat, lng) < LOC_THRESHOLD_KM) return;
+
+      _lastLat = lat; _lastLng = lng;
+
+      const locText = document.getElementById("trackerLocationText");
+      if (locText) locText.textContent = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+
+      try {
+        const res = await fetch("/api/volunteer/work/location", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ task_id: MATCH_ID, lat, lng }) 
+        });
+        if (!res.ok) throw new Error("Location push failed");
+        _flushLocationQueue();
+      } catch {
+        _locationQueue.push({ lat, lng, ts: Date.now() });
+        if (locText) locText.textContent += " (queued)";
+      }
+    }
+
+    async function _flushLocationQueue() {
+      if (!MATCH_ID) return;
+      while (_locationQueue.length > 0) {
+        const item = _locationQueue[0];
+        try {
+          const res = await fetch("/api/volunteer/work/location", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ task_id: MATCH_ID, lat: item.lat, lng: item.lng }) 
+          });
+          if (!res.ok) break; 
+          _locationQueue.shift();
+        } catch { break; }
+      }
+    }
+
+    // ── NGO Live Tracking Map ────────────────────────
+    let _ngoMapInstance = null;
+    let _ngoMarkerInstance = null;
+    let _ngoPollInterval = null;
+
+    async function initNgoLiveMap() {
+      const keyRes = await fetch("/api/get_ola_maps_key");
+      const { OLA_MAPS_API_KEY } = await keyRes.json();
+      if (!OLA_MAPS_API_KEY) return;
+
+      let startLng = 77.5946;
+      let startLat = 12.9716;
+      try {
+          const res = await fetch(`/api/need/${NEED_ID}`);
+          const data = await res.json();
+          if (data.need && data.need.location && data.need.location.lat) {
+              startLat = data.need.location.lat;
+              startLng = data.need.location.lng;
+          }
+      } catch(e) {}
+
+      const olaMaps = new OlaMaps({ apiKey: OLA_MAPS_API_KEY });
+      
+      _ngoMapInstance = olaMaps.init({
+        style: "https://api.olamaps.io/tiles/vector/v1/styles/default-light-standard/style.json",
+        container: "ngoLiveMap",
+        center: [startLng, startLat], 
+        zoom: 14
+      });
+
+      _ngoMapInstance.on('load', () => {
+        // FIX: Force resize so it is not a blank blue box!
+        setTimeout(() => { _ngoMapInstance.resize(); }, 300);
+
+        _pollVolunteerLocation();
+        _ngoPollInterval = setInterval(_pollVolunteerLocation, 10000); 
+      });
+    }
+
+    async function _pollVolunteerLocation() {
+      try {
+        const res = await fetch(`/api/need/${NEED_ID}`);
+        const data = await res.json();
+        const vLoc = data.need.volunteer_location; 
+        
+        if (vLoc && vLoc.lat && vLoc.lng) {
+          if (!_ngoMarkerInstance) {
+            const el = document.createElement("div");
+            el.style.cssText = "width:24px;height:24px;background:#006c44;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,.2);";
+            _ngoMarkerInstance = new OlaMaps.Marker({ element: el })
+              .setLngLat([vLoc.lng, vLoc.lat])
+              .addTo(_ngoMapInstance);
+            _ngoMapInstance.setCenter([vLoc.lng, vLoc.lat]);
+          } else {
+            _ngoMarkerInstance.setLngLat([vLoc.lng, vLoc.lat]);
+          }
+          
+          document.getElementById('ngoLiveStatus').textContent = `Last seen: ${new Date(vLoc.updated_at).toLocaleTimeString()}`;
+        } else {
+          document.getElementById('ngoLiveStatus').textContent = "Waiting for volunteer to start work...";
+        }
+      } catch (err) {
+        console.warn("Poll error:", err);
+      }
+    }
+  </script>
+</body>
+</html>

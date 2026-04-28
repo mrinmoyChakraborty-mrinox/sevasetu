@@ -1,147 +1,174 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SevaSetu Onboarding</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/volunteer_onboarding.css') }}" />
-</head>
-<body>
-  <div class="page">
-    <header class="topbar">
-      <div class="brand">SevaSetu</div>
-    </header>
+{% extends "base.html" %}
 
-    <main class="content">
-      <section class="hero">
-        <div class="hero-icon">👤</div>
+{% block title %}SevaSetu | Volunteer Onboarding{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/volunteer_onboarding.css') }}" />
+<style>
+    /* Override some onboarding styles to fit base.html */
+    .page { padding-top: 0; }
+    .topbar { display: none; } /* Already have navbar from base.html */
+    .footer { display: none; } /* Use base.html footer */
+    body { background: #f8f9ff; }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="max-w-4xl mx-auto px-6 py-12 pb-32" data-aos="fade-up">
+    <section class="hero flex items-center gap-6 mb-12">
+        <div class="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center text-4xl">👤</div>
         <div>
-          <h1>Become a Volunteer</h1>
-          <p>Let's tailor your experience to your strengths.</p>
+            <h1 class="text-4xl font-extrabold text-on-surface tracking-tight">Become a Volunteer</h1>
+            <p class="text-slate-500 mt-1">Let's tailor your experience to your strengths.</p>
         </div>
-      </section>
+    </section>
 
-      <!-- Error / success message -->
-      <div id="formError" style="display:none;margin:0 0 16px;"></div>
+    <!-- Error / success message -->
+    <div id="formError" class="hidden p-4 bg-red-50 text-red-600 rounded-2xl mb-8 font-bold text-sm border border-red-100"></div>
 
-      <form id="onboardingForm" enctype="multipart/form-data">
+    <form id="onboardingForm" enctype="multipart/form-data" class="space-y-12">
 
         <!-- Hidden lat/lng populated by map -->
         <input type="hidden" id="latitude"  name="latitude"  value="12.9716"/>
         <input type="hidden" id="longitude" name="longitude" value="77.5946"/>
 
-        <section class="profile-form-card">
-          <h2 class="form-title">Create Your Profile</h2>
-          <p class="form-sub">Let the community get to know the person behind the kindness.</p>
+        <section class="bg-white rounded-[2.5rem] p-10 shadow-sm border border-slate-100">
+            <h2 class="text-2xl font-bold text-on-surface mb-2">Create Your Profile</h2>
+            <p class="text-slate-500 mb-10">Let the community get to know the person behind the kindness.</p>
 
-          <div class="photo-upload">
-            <div class="photo-circle">
-              <span>📷</span>
+            <div class="photo-upload flex flex-col items-center mb-10">
+                <div class="photo-circle w-32 h-32 bg-slate-50 border-2 border-dashed border-slate-200 rounded-full flex items-center justify-center text-4xl text-slate-300 relative group cursor-pointer" onclick="document.getElementById('photoInput').click()">
+                    <span class="group-hover:scale-110 transition-transform">📷</span>
+                    <button type="button" class="photo-add absolute bottom-1 right-1 w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center font-bold shadow-lg">+</button>
+                </div>
+                <input type="file" id="photoInput" name="photo" accept="image/*" hidden onchange="previewPhoto(this)" />
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mt-4">Profile Photo</p>
             </div>
-            <button type="button" class="photo-add">+</button>
-            <input type="file" id="photoInput" name="photo" accept="image/*" hidden />
-          </div>
 
-          <div class="form-group">
-            <label>FULL NAME</label>
-            <input type="text" id="fullName" name="name" placeholder="e.g. Aarav Sharma" />
-          </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="space-y-3">
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Full Name</label>
+                    <input type="text" id="fullName" name="name" placeholder="e.g. Aarav Sharma" 
+                           class="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all"/>
+                </div>
 
-          <div class="form-group phone-group">
-            <label>PHONE NUMBER</label>
-            <div class="phone-wrap">
-              <span>+91</span>
-              <input type="text" id="phone" name="phone" placeholder="98765 43210" />
+                <div class="space-y-3">
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Phone Number</label>
+                    <div class="flex items-center bg-slate-50 rounded-2xl px-6 border border-transparent focus-within:ring-2 focus-within:ring-primary/20 transition-all">
+                        <span class="text-slate-400 font-bold mr-3">+91</span>
+                        <input type="text" id="phone" name="phone" placeholder="98765 43210" 
+                               class="w-full bg-transparent border-none py-4 text-sm font-medium focus:ring-0"/>
+                    </div>
+                </div>
             </div>
-          </div>
 
-          <div class="form-group">
-            <label>A LITTLE ABOUT YOU</label>
-            <textarea id="about" name="about" placeholder="Share your passions or why you'd like to help..."></textarea>
-            <small>Max 300 characters</small>
-          </div>
+            <div class="mt-8 space-y-3">
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">A little about you</label>
+                <textarea id="about" name="about" placeholder="Share your passions or why you'd like to help..." 
+                          class="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all resize-none h-32"></textarea>
+                <div class="flex justify-between px-1">
+                    <small class="text-slate-400 font-bold uppercase text-[10px]">Max 300 characters</small>
+                    <small id="charCount" class="text-slate-400 font-bold uppercase text-[10px]">0 / 300</small>
+                </div>
+            </div>
         </section>
 
-        <section class="section">
-          <h3>SELECT YOUR SKILLS</h3>
-          <div class="chip-group" id="skillsGroup">
-            <button type="button" class="chip" data-skill="First Aid">First Aid </button>
-            <button type="button" class="chip" data-skill="Teaching">Teaching </button>
-            <button type="button" class="chip" data-skill="Driving">Driving </button>
-            <button type="button" class="chip" data-skill="Cooking">Cooking</button>
-            <button type="button" class="chip" data-skill="Construction">Construction</button>
-            <button type="button" class="chip" data-skill="Counseling">Counseling</button>
-            <button type="button" class="chip" data-skill="Medical">Medical</button>
-            <button type="button" class="chip" data-skill="IT Support">IT Support</button>
-            <button type="button" class="chip" data-skill="Translation">Translation</button>
-            <button type="button" class="chip plus" data-skill="Other">+ Other</button>
-          </div>
+        <section class="bg-white rounded-[2.5rem] p-10 shadow-sm border border-slate-100">
+            <h3 class="text-xl font-bold text-on-surface mb-8">Select Your Skills</h3>
+            <div class="chip-group flex flex-wrap gap-3" id="skillsGroup">
+                <button type="button" class="chip active px-6 py-3 rounded-full bg-primary text-white font-bold text-xs transition-all" data-skill="First Aid">First Aid ✕</button>
+                <button type="button" class="chip active px-6 py-3 rounded-full bg-primary text-white font-bold text-xs transition-all" data-skill="Teaching">Teaching ✕</button>
+                <button type="button" class="chip active px-6 py-3 rounded-full bg-primary text-white font-bold text-xs transition-all" data-skill="Driving">Driving ✕</button>
+                <button type="button" class="chip px-6 py-3 rounded-full bg-slate-50 text-slate-600 font-bold text-xs border border-slate-100 hover:bg-slate-100 transition-all" data-skill="Cooking">Cooking</button>
+                <button type="button" class="chip px-6 py-3 rounded-full bg-slate-50 text-slate-600 font-bold text-xs border border-slate-100 hover:bg-slate-100 transition-all" data-skill="Construction">Construction</button>
+                <button type="button" class="chip px-6 py-3 rounded-full bg-slate-50 text-slate-600 font-bold text-xs border border-slate-100 hover:bg-slate-100 transition-all" data-skill="Counseling">Counseling</button>
+                <button type="button" class="chip px-6 py-3 rounded-full bg-slate-50 text-slate-600 font-bold text-xs border border-slate-100 hover:bg-slate-100 transition-all" data-skill="Medical">Medical</button>
+                <button type="button" class="chip px-6 py-3 rounded-full bg-slate-50 text-slate-600 font-bold text-xs border border-slate-100 hover:bg-slate-100 transition-all" data-skill="IT Support">IT Support</button>
+                <button type="button" class="chip px-6 py-3 rounded-full bg-slate-50 text-slate-600 font-bold text-xs border border-slate-100 hover:bg-slate-100 transition-all" data-skill="Translation">Translation</button>
+                <button type="button" class="chip plus px-6 py-3 rounded-full bg-primary/10 text-primary font-bold text-xs border border-primary/10 hover:bg-primary/20 transition-all" data-skill="Other">+ Other</button>
+            </div>
         </section>
 
-        <section class="section">
-          <h3>AVAILABILITY</h3>
-          <div class="segmented" id="availabilityGroup">
-            <button type="button" class="segment" data-value="Weekdays">Weekdays</button>
-            <button type="button" class="segment" data-value="Weekends">Weekends</button>
-            <button type="button" class="segment" data-value="Anytime">Anytime</button>
-          </div>
+        <section class="bg-white rounded-[2.5rem] p-10 shadow-sm border border-slate-100">
+            <h3 class="text-xl font-bold text-on-surface mb-8">Availability</h3>
+            <div class="segmented flex bg-slate-50 p-1.5 rounded-2xl" id="availabilityGroup">
+                <button type="button" class="segment flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all text-slate-500" data-value="Weekdays">Weekdays</button>
+                <button type="button" class="segment flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all bg-white text-primary shadow-sm" data-value="Weekends">Weekends</button>
+                <button type="button" class="segment flex-1 py-3 px-4 rounded-xl text-sm font-bold transition-all text-slate-500" data-value="Anytime">Anytime</button>
+            </div>
         </section>
 
-        <section class="section">
-          <div class="row">
-            <h3>SERVICE RADIUS</h3>
-            <div class="radius-value"><span id="radiusValue">15</span> KM</div>
-          </div>
-          <input type="range" min="1" max="50" value="15"
-                 id="radiusSlider" name="radius" class="slider" />
-          <div class="slider-labels">
-            <span>1KM</span>
-            <span>25KM</span>
-            <span>50KM</span>
-          </div>
+        <section class="bg-white rounded-[2.5rem] p-10 shadow-sm border border-slate-100">
+            <div class="flex justify-between items-center mb-8">
+                <h3 class="text-xl font-bold text-on-surface">Service Radius</h3>
+                <div class="radius-value px-4 py-1.5 bg-primary/10 text-primary rounded-full font-black text-sm"><span id="radiusValue">15</span> KM</div>
+            </div>
+            <input type="range" min="1" max="50" value="15" id="radiusSlider" name="radius" 
+                   class="w-full h-2 bg-slate-100 rounded-full appearance-none cursor-pointer accent-primary" />
+            <div class="flex justify-between mt-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                <span>1KM</span>
+                <span>25KM</span>
+                <span>50KM</span>
+            </div>
         </section>
 
-        <section class="section">
-          <h3>BASE LOCATION</h3>
-          <!-- Ola Maps container -->
-          <div id="locationMap" class="map-card"
-               style="height:220px;border-radius:12px;overflow:hidden;"></div>
-          <div id="mapLocationTag" class="map-tag" style="margin-top:8px;">
-            📍 Drag pin or click map to set location
-          </div>
-          <button type="button" id="useMyLocationBtn"
-                  style="margin-top:10px;display:flex;align-items:center;gap:6px;
-                         padding:10px 20px;border:2px solid #4caf7d;border-radius:9999px;
-                         background:white;color:#006c44;font-weight:700;cursor:pointer;
-                         font-family:'Plus Jakarta Sans',sans-serif;">
-            ⌖ Use my location
-          </button>
-          <p class="map-note">We use your location to find nearby community needs that match your skills.</p>
+        <section class="bg-white rounded-[2.5rem] p-10 shadow-sm border border-slate-100">
+            <h3 class="text-xl font-bold text-on-surface mb-8">Base Location</h3>
+
+            <div class="relative mb-6">
+                <input type="text" id="locationSearchInput" placeholder="Search area, city, or landmark…"
+                       class="w-full bg-slate-50 border-none rounded-2xl pl-12 pr-6 py-4 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all outline-none"
+                       autocomplete="off"/>
+                <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">search</span>
+                <div id="locationSuggestions" class="hidden absolute z-[100] top-full mt-2 left-0 right-0 bg-white border border-slate-100 rounded-2xl shadow-2xl overflow-hidden"></div>
+            </div>
+
+            <div id="locationMap" class="w-full h-64 rounded-3xl border-2 border-slate-50 bg-slate-50 overflow-hidden shadow-inner"></div>
+            <div id="mapLocationTag" class="mt-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                <span class="material-symbols-outlined text-sm">location_on</span> Drag pin or click map to set location
+            </div>
+            
+            <button type="button" id="useMyLocationBtn" class="mt-6 flex items-center gap-2 px-6 py-3 border-2 border-primary/20 rounded-full bg-white text-primary font-bold text-sm hover:bg-primary/5 transition-all">
+                <span class="material-symbols-outlined text-lg">my_location</span> Use my location
+            </button>
+            <p class="text-xs text-slate-400 mt-6 leading-relaxed">We use your location to find nearby community needs that match your skills.</p>
         </section>
 
-        <section class="actions">
-          <button type="submit" id="submitBtn" class="primary-btn">
-            Complete Profile
-          </button>
-          <button type="button" class="secondary-btn" id="saveLaterBtn">
-            SAVE FOR LATER
-          </button>
+        <section class="flex flex-col md:flex-row gap-4 pt-6">
+            <button type="submit" id="submitBtn" class="flex-[2] py-5 primary-gradient-btn text-white rounded-2xl font-black text-sm shadow-xl shadow-primary/20 hover:scale-[1.02] transition-all">
+                Complete Profile
+            </button>
+            <button type="button" id="saveLaterBtn" class="flex-1 py-5 bg-slate-100 text-slate-500 rounded-2xl font-bold text-sm hover:bg-slate-200 transition-all">
+                Save for Later
+            </button>
         </section>
 
-      </form>
-    </main>
+    </form>
+</main>
+{% endblock %}
 
-    <footer class="footer">
-      <div class="brand">SevaSetu</div>
-      <div class="copyright">© 2026 SevaSetu. Elevated Neighborliness.</div>
-      <div class="links">
-        <a href="#">Privacy Policy</a>
-        <a href="#">Community Guidelines</a>
-      </div>
-    </footer>
-  </div>
-
-  <script src="https://www.unpkg.com/olamaps-web-sdk@latest/dist/olamaps-web-sdk.umd.js"></script>
-  <script src="{{ url_for('static', filename='js/volunteer_onboarding.js') }}"></script>
-</body>
-</html>
+{% block scripts %}
+<script src="https://www.unpkg.com/olamaps-web-sdk@latest/dist/olamaps-web-sdk.umd.js"></script>
+<script src="{{ url_for('static', filename='js/volunteer_onboarding.js') }}"></script>
+<script>
+    function previewPhoto(input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const circle = document.querySelector('.photo-circle');
+                circle.style.backgroundImage = `url(${e.target.result})`;
+                circle.style.backgroundSize = 'cover';
+                circle.style.backgroundPosition = 'center';
+                circle.querySelector('span').style.display = 'none';
+            }
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+    
+    // Character count for about text
+    document.getElementById('about').addEventListener('input', function() {
+        const count = this.value.length;
+        document.getElementById('charCount').textContent = `${count} / 300`;
+    });
+</script>
+{% endblock %}

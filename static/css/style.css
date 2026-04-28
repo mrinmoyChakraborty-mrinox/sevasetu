@@ -356,3 +356,35 @@
         max-width: 85%;
     }
 }
+
+/* Mobile Navbar Fix - Safe */
+
+@media (max-width: 767px) {
+
+  nav {
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+  }
+
+  /* Make logo smaller */
+  nav a img.h-10 {
+    height: 32px !important;
+  }
+
+  nav a img.h-8 {
+    height: 22px !important;
+  }
+
+  /* Get Started button smaller */
+  nav .primary-gradient-btn {
+    padding: 8px 14px !important;
+    font-size: 12px !important;
+    white-space: nowrap;
+  }
+
+  /* Right side spacing tighter */
+  nav .gap-4 {
+    gap: 8px !important;
+  }
+
+}

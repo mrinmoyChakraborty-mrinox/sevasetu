@@ -1,0 +1,340 @@
+{% extends "base.html" %}
+
+{% block title %}Review Extracted Needs | SevaSetu{% endblock %}
+
+{% block head %}
+<style>
+  .urgency-slider::-webkit-slider-runnable-track {
+    background: linear-gradient(to right, #4caf7d, #fea619, #fa7272);
+    height: 8px; border-radius: 4px;
+  }
+  .urgency-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; height: 20px; width: 20px;
+    border-radius: 50%; background: #ffffff; border: 2px solid #006c44;
+    margin-top: -6px; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  }
+  .urgency-slider { appearance: none; }
+
+  .toggle-btn { transition: background 0.2s; }
+  .toggle-btn.on  { background: #006c44; }
+  .toggle-btn.off { background: #dee9fc; }
+  .toggle-thumb { transition: transform 0.2s; }
+  .toggle-btn.on  .toggle-thumb { transform: translateX(24px); background: white; }
+  .toggle-btn.off .toggle-thumb { transform: translateX(2px);  background: #6e7a71; }
+
+  .need-card { transition: opacity 0.3s, box-shadow 0.2s; }
+  .need-card.excluded { opacity: 0.45; }
+  .need-card:hover { box-shadow: 0 24px 56px rgba(0,108,68,0.08); }
+
+  .skill-chip { display:flex; align-items:center; gap:4px; padding:4px 12px;
+    background: rgba(119,218,164,0.25); color:#005232; border-radius:99px;
+    font-size:.72rem; font-weight:700; }
+  .skill-chip button { cursor:pointer; color:#6e7a71; font-size:12px; line-height:1; }
+  
+  .loc-status { font-size:.7rem; font-weight:600; margin-top:4px;
+    display:flex; align-items:center; gap:4px; transition:all .2s; }
+  .loc-status.geocoding { color:#855300; }
+  .loc-status.geocoded  { color:#006c44; }
+  .loc-status.failed    { color:#a83639; }
+  .loc-status.empty     { color:#6e7a71; }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="max-w-7xl mx-auto px-6 py-10 space-y-10 pb-24" data-aos="fade-up">
+
+  <!-- Page Header -->
+  <header class="flex flex-col md:flex-row md:items-end justify-between gap-6">
+    <div>
+      <div class="flex items-center gap-3 mb-2">
+        <span class="material-symbols-outlined text-primary text-3xl" style="font-variation-settings:'FILL' 1">auto_awesome</span>
+        <h1 class="text-4xl md:text-5xl font-black tracking-tight text-on-surface">AI Analysis Complete</h1>
+      </div>
+      <p id="subheading" class="text-on-surface-variant text-lg font-medium">
+        Loading extracted needs…
+      </p>
+    </div>
+    <div class="flex gap-3">
+        <button onclick="window.location.href='/ngo/reports'" class="px-6 py-3 bg-slate-100 text-slate-500 rounded-full font-bold text-sm hover:bg-slate-200 transition-all">
+            Discard & Exit
+        </button>
+    </div>
+  </header>
+
+  <!-- Needs List -->
+  <div id="needsList" class="grid grid-cols-1 gap-8">
+    <div class="need-card bg-white rounded-3xl p-10 shadow-sm border border-slate-100 animate-pulse">
+      <div class="h-8 bg-slate-100 rounded-xl w-1/3 mb-6"></div>
+      <div class="h-24 bg-slate-50 rounded-2xl w-full"></div>
+    </div>
+  </div>
+
+  <!-- Footer Actions -->
+  <footer id="footerActions" class="mt-16 flex flex-col items-center gap-6 hidden">
+    <div class="flex items-center gap-4 bg-emerald-50 border border-emerald-100 rounded-full px-8 py-3 text-sm">
+      <span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+      <span id="includedCount" class="font-bold text-primary">0 needs</span>
+      <span class="text-emerald-700 font-medium">selected to publish</span>
+    </div>
+    <button id="publishBtn"
+            class="w-full md:w-[480px] primary-gradient-btn text-white text-lg font-bold py-6 rounded-3xl shadow-2xl shadow-primary/20 hover:scale-[1.02] transition-all flex items-center justify-center gap-3">
+      Confirm & Publish All Needs
+      <span class="material-symbols-outlined">send</span>
+    </button>
+  </footer>
+
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const reportId = window.location.pathname.split('/').pop();
+let needsData  = [];
+let OLA_MAPS_API_KEY = null;
+
+const CATEGORIES = ['Healthcare','Education','Logistics','Food & Nutrition','Shelter','Mental Health','Water & Sanitation','Environment','Other'];
+
+// ── Load OlaMaps key ────────────────────────────────────────
+async function loadOlaMapsKey() {
+  try {
+    const res  = await fetch('/api/get_ola_maps_key');
+    const data = await res.json();
+    OLA_MAPS_API_KEY = data.OLA_MAPS_API_KEY;
+  } catch {}
+}
+
+async function geocodeText(text) {
+  if (!OLA_MAPS_API_KEY || !text.trim()) return null;
+  try {
+    const res  = await fetch(
+      `https://api.olamaps.io/places/v1/textsearch?input=${encodeURIComponent(text)}&api_key=${OLA_MAPS_API_KEY}`
+    );
+    const data = await res.json();
+    const results = data.results || [];
+    if (!results.length) return null;
+    const first = results[0];
+    const geo   = first.geometry?.location || {};
+    if (!geo.lat || !geo.lng) return null;
+    let city = (first.formatted_address || text).split(',')[0].trim();
+    return { city, lat: geo.lat, lng: geo.lng };
+  } catch { return null; }
+}
+
+function urgencyBadgeClass(score) {
+  if (score >= 8) return 'bg-red-50 text-red-600 border border-red-100';
+  if (score >= 5) return 'bg-amber-50 text-amber-700 border border-amber-100';
+  return 'bg-emerald-50 text-emerald-700 border border-emerald-100';
+}
+
+function buildCard(need, idx) {
+  const skillChips = (need.required_skills || []).map(s => `
+    <span class="skill-chip" data-skill="${escHtml(s)}">
+      ${escHtml(s)}
+      <button type="button" onclick="removeSkill('${need.id}','${escHtml(s)}')" title="Remove skill">
+        <span class="material-symbols-outlined" style="font-size:13px">close</span>
+      </button>
+    </span>`).join('');
+
+  const catOptions = CATEGORIES.map(c =>
+    `<option ${c===need.category?'selected':''}>${c}</option>`
+  ).join('');
+
+  const locObj = (typeof need.location === 'object' && need.location) ? need.location : { city: need.location || '', lat: null, lng: null };
+  const cityText = locObj.city || '';
+  const hasCoords = locObj.lat && locObj.lng;
+
+  return `
+  <article class="need-card bg-white rounded-[2.5rem] p-10 shadow-sm border border-slate-100 relative ${need.included?'':'excluded'}"
+           id="card-${need.id}" data-id="${need.id}">
+    
+    <div class="flex flex-col lg:flex-row gap-10">
+      <div class="flex-1 space-y-8">
+        <div class="flex justify-between items-start gap-4">
+          <div class="flex-1 space-y-3">
+            <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Title</label>
+            <input type="text" class="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 text-xl font-bold focus:ring-2 focus:ring-primary/20 transition-all"
+                   value="${escHtml(need.title)}"
+                   onchange="updateField('${need.id}','title',this.value)"/>
+          </div>
+          <div class="flex items-center gap-3 pt-10 flex-shrink-0">
+            <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">Include</span>
+            <button type="button" class="toggle-btn ${need.included?'on':'off'} w-14 h-7 rounded-full relative"
+                    id="toggle-${need.id}"
+                    onclick="toggleInclude('${need.id}')">
+              <div class="toggle-thumb absolute top-1 w-5 h-5 rounded-full shadow-sm"></div>
+            </button>
+          </div>
+        </div>
+
+        <div class="space-y-3">
+          <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Description</label>
+          <textarea class="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 text-sm focus:ring-2 focus:ring-primary/20 transition-all resize-none" rows="3"
+                    onchange="updateField('${need.id}','description',this.value)">${escHtml(need.description||'')}</textarea>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div class="space-y-3">
+            <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Category</label>
+            <div class="bg-slate-50 rounded-2xl px-2">
+                <select class="w-full bg-transparent border-none py-4 px-4 text-sm font-bold text-slate-600 focus:ring-0 cursor-pointer"
+                        onchange="updateField('${need.id}','category',this.value)">${catOptions}</select>
+            </div>
+          </div>
+
+          <div class="space-y-3">
+            <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Location</label>
+            <div class="relative bg-slate-50 rounded-2xl px-6 py-1 border border-slate-100">
+              <span class="material-symbols-outlined absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 text-xl pointer-events-none">location_on</span>
+              <input type="text" id="loc-input-${need.id}" class="w-full bg-transparent border-none pl-10 pr-4 py-4 text-sm font-bold focus:ring-0"
+                     value="${escHtml(cityText)}" onchange="handleLocationChange('${need.id}', this.value)"/>
+            </div>
+            <div id="loc-status-${need.id}" class="loc-status ${hasCoords ? 'geocoded' : 'empty'} ml-1">
+              ${hasCoords ? 'Coordinates resolved' : 'No coordinates'}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="w-full lg:w-80 space-y-8 bg-slate-50/50 p-8 rounded-3xl border border-slate-100">
+        <div class="space-y-4">
+          <div class="flex justify-between items-center">
+            <label class="text-xs font-bold text-slate-500 uppercase tracking-widest">Urgency</label>
+            <span id="urgency-badge-${need.id}" class="px-4 py-1.5 rounded-full text-xs font-black ${urgencyBadgeClass(need.urgency_score||5)}">
+              ${need.urgency_score||5} / 10
+            </span>
+          </div>
+          <input type="range" min="1" max="10" class="urgency-slider w-full"
+                 value="${need.urgency_score||5}"
+                 oninput="updateUrgency('${need.id}',this.value)"/>
+        </div>
+
+        <div class="space-y-4">
+          <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest">Skills Needed</label>
+          <div id="skills-${need.id}" class="flex flex-wrap gap-2">
+            ${skillChips}
+          </div>
+          <div class="flex gap-2">
+            <input type="text" id="skill-input-${need.id}" class="flex-1 bg-white border border-slate-200 rounded-xl px-4 py-2 text-xs font-bold focus:ring-2 focus:ring-primary/10 outline-none" placeholder="Add Skill"/>
+            <button type="button" onclick="addSkill('${need.id}')" class="px-4 py-2 bg-primary text-white rounded-xl font-bold text-xs hover:opacity-90 transition-all">+</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </article>`;
+}
+
+const _geocodeTimers = {};
+async function handleLocationChange(id, text) {
+  const need = needsData.find(n => n.id === id);
+  if (!need) return;
+  const statusEl = document.getElementById(`loc-status-${id}`);
+  statusEl.className = 'loc-status geocoding';
+  statusEl.innerHTML = 'Looking up...';
+  clearTimeout(_geocodeTimers[id]);
+  _geocodeTimers[id] = setTimeout(async () => {
+    const result = await geocodeText(text);
+    if (result) {
+      need.location = result;
+      statusEl.className = 'loc-status geocoded';
+      statusEl.innerHTML = 'Verified';
+    } else {
+      statusEl.className = 'loc-status failed';
+      statusEl.innerHTML = 'Manual check needed';
+    }
+  }, 800);
+}
+
+function toggleInclude(id) {
+  const need = needsData.find(n => n.id === id);
+  if (!need) return;
+  need.included = !need.included;
+  document.getElementById(`card-${id}`).classList.toggle('excluded', !need.included);
+  document.getElementById(`toggle-${id}`).className = `toggle-btn ${need.included?'on':'off'} w-14 h-7 rounded-full relative`;
+  updateIncludedCount();
+}
+
+function updateField(id, field, value) {
+  const need = needsData.find(n => n.id === id);
+  if (need) need[field] = value;
+}
+
+function updateUrgency(id, val) {
+  const score = parseInt(val);
+  const need  = needsData.find(n => n.id === id);
+  if (need) need.urgency_score = score;
+  const badge = document.getElementById(`urgency-badge-${id}`);
+  if (badge) {
+    badge.textContent = `${score} / 10`;
+    badge.className = `px-4 py-1.5 rounded-full text-xs font-black ${urgencyBadgeClass(score)}`;
+  }
+}
+
+function addSkill(id) {
+  const input = document.getElementById(`skill-input-${id}`);
+  const skill = input.value.trim();
+  if (!skill) return;
+  const need = needsData.find(n => n.id === id);
+  if (!need) return;
+  if (!need.required_skills) need.required_skills = [];
+  if (!need.required_skills.includes(skill)) {
+    need.required_skills.push(skill);
+    const wrap = document.getElementById(`skills-${id}`);
+    const chip = document.createElement('span');
+    chip.className = 'skill-chip';
+    chip.dataset.skill = skill;
+    chip.innerHTML = `${escHtml(skill)}<button onclick="removeSkill('${id}','${escHtml(skill)}')"><span class="material-symbols-outlined" style="font-size:13px">close</span></button>`;
+    wrap.appendChild(chip);
+  }
+  input.value = '';
+}
+
+function removeSkill(id, skill) {
+  const need = needsData.find(n => n.id === id);
+  if (need) need.required_skills = (need.required_skills||[]).filter(s => s !== skill);
+  document.getElementById(`skills-${id}`).querySelectorAll('.skill-chip').forEach(c => { if(c.dataset.skill === skill) c.remove(); });
+}
+
+function updateIncludedCount() {
+  const n = needsData.filter(x => x.included).length;
+  document.getElementById('includedCount').textContent = `${n} need${n!==1?'s':''}`;
+}
+
+async function loadNeeds() {
+  try {
+    const res = await fetch(`/api/ngo/report/${reportId}/needs`);
+    const data = await res.json();
+    needsData = (data.needs || []).map(n => ({ ...n, included: true }));
+    document.getElementById('subheading').innerHTML = `Extracted <strong>${needsData.length}</strong> needs from your report`;
+    document.getElementById('needsList').innerHTML = needsData.map((n, i) => buildCard(n, i)).join('');
+    updateIncludedCount();
+    document.getElementById('footerActions').classList.remove('hidden');
+  } catch (err) {
+    document.getElementById('needsList').innerHTML = '<div class="text-center py-20 font-bold text-red-500">Error loading data</div>';
+  }
+}
+
+document.getElementById('publishBtn').addEventListener('click', async () => {
+  const toPublish = needsData.filter(n => n.included);
+  if (!toPublish.length) return;
+  const btn = document.getElementById('publishBtn');
+  btn.disabled = true;
+  btn.innerHTML = 'Publishing...';
+  try {
+    const res = await fetch(`/api/ngo/report/${reportId}/publish`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ needs: toPublish })
+    });
+    if (res.ok) window.location.href = '/ngo/dashboard';
+    else throw new Error();
+  } catch {
+    btn.disabled = false;
+    btn.innerHTML = 'Retry Publishing';
+  }
+});
+
+function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+loadOlaMapsKey().then(loadNeeds);
+</script>
+{% endblock %}

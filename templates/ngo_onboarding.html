@@ -3,9 +3,9 @@
 {% block title %}NGO Onboarding | SevaSetu{% endblock %}
 
 {% block head %}
-  <!-- Leaflet Map -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Ola Maps SDK -->
+  <link rel="stylesheet" href="https://www.unpkg.com/olamaps-web-sdk@latest/dist/style.css" />
+  <script src="https://www.unpkg.com/olamaps-web-sdk@latest/dist/olamaps-web-sdk.umd.js"></script>
 
   <style>
     /* Hide base navbar on onboarding — transactional page */
@@ -15,318 +15,287 @@
       background: linear-gradient(90deg, #006c44 0%, #4caf7d 100%);
     }
 
-    /* Leaflet map fix inside rounded container */
     #ngoMap {
       width: 100%;
-      height: 220px;
-      border-radius: 0.75rem;
+      height: 250px;
+      border-radius: 1rem;
       z-index: 1;
     }
 
-    /* Upload zone drag state */
-    .upload-zone-active {
-      border-color: #006c44 !important;
-      background-color: #dcfce7 !important;
-      transform: scale(1.01);
+    /* Step indicator */
+    .step-active { color: #006c44; font-weight: 800; }
+    .step-line-active { background-color: #006c44; }
+
+    /* Custom form styling */
+    .form-card {
+      background: white;
+      border-radius: 1.5rem;
+      padding: 2.5rem;
+      box-shadow: 0 20px 50px rgba(0, 108, 68, 0.05);
+      border: 1px solid rgba(0, 108, 68, 0.05);
     }
 
-    /* Error state on inputs */
+    .input-group label {
+      font-size: 0.75rem;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: #3e4942;
+      margin-bottom: 0.5rem;
+      display: block;
+      padding-left: 0.25rem;
+    }
+
+    .input-field {
+      width: 100%;
+      background: #f8f9ff;
+      border: 1.5px solid transparent;
+      border-radius: 1rem;
+      padding: 1rem 1.25rem;
+      transition: all 0.2s;
+      font-weight: 500;
+    }
+
+    .input-field:focus {
+      border-color: #4caf7d;
+      background: white;
+      outline: none;
+      box-shadow: 0 0 0 4px rgba(76, 175, 125, 0.1);
+    }
+
     .input-error {
-      ring: 2px;
-      --tw-ring-color: #ba1a1a;
-      border: 1.5px solid #ba1a1a !important;
+      border-color: #ba1a1a !important;
     }
 
-    /* Error message */
-    .field-error {
-      font-size: 0.72rem;
+    .error-text {
       color: #ba1a1a;
+      font-size: 0.75rem;
       font-weight: 600;
-      margin-top: 4px;
+      margin-top: 0.4rem;
+      padding-left: 0.25rem;
       display: none;
     }
-    .field-error.show { display: block; }
 
-    /* Success state on submit */
-    .btn-loading {
-      opacity: 0.7;
-      cursor: not-allowed;
-      pointer-events: none;
+    .error-text.show { display: block; }
+
+    /* Progress Bar */
+    .progress-bar-container {
+      width: 100%;
+      height: 6px;
+      background: #e6eeff;
+      border-radius: 99px;
+      overflow: hidden;
+      margin-bottom: 2rem;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #006c44, #4caf7d);
+      width: 33%;
+      transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
     }
   </style>
 {% endblock %}
 
 {% block content %}
 
-<!-- ── MINIMAL ONBOARDING NAVBAR ── -->
-<nav class="fixed top-0 z-50 w-full bg-surface-container-low/80 backdrop-blur-xl shadow-[0_20px_40px_rgba(0,108,68,0.06)]">
+<!-- ── MINIMAL NAVBAR ── -->
+<nav class="fixed top-0 z-50 w-full bg-white/80 backdrop-blur-xl border-b border-emerald-50">
   <div class="flex justify-between items-center w-full px-6 py-4 max-w-7xl mx-auto">
-
-    <!-- Logo -->
-    <div class="text-2xl font-bold text-emerald-900 tracking-tighter flex items-center gap-2">
-      <span class="material-symbols-outlined text-primary text-3xl"
-            style="font-variation-settings: 'FILL' 1;">eco</span>
-      SevaSetu
+    <div class="flex items-center gap-2">
+      <img src="{{ url_for('static', filename='images/only_logo.png') }}" alt="Logo" class="h-10 w-auto">
+      <img src="{{ url_for('static', filename='images/text_logo.png') }}" alt="SevaSetu" class="h-8 w-auto">
     </div>
-
-    <!-- Step indicator -->
-    <div class="hidden md:flex items-center gap-3">
-      <span class="text-xs font-bold tracking-widest uppercase text-primary">
-        NGO Setup
-      </span>
-    </div>
-
-    <!-- User avatar -->
-    <div class="flex items-center gap-3">
-      {% if user %}
-      <span class="text-sm text-on-surface-variant hidden md:block">
-        {{ user.name }}
-      </span>
-      <div class="w-9 h-9 rounded-full overflow-hidden border-2 border-primary-container">
-        <img src="{{ user.photo_url or '' }}"
-             alt="Profile"
-             class="w-full h-full object-cover"/>
+    
+    <div class="flex items-center gap-4">
+      <div class="hidden md:flex flex-col items-end">
+        <span class="text-xs font-bold text-on-surface-variant uppercase tracking-widest">Onboarding</span>
+        <span class="text-sm font-bold text-primary">NGO Registration</span>
       </div>
-      {% endif %}
+      <div class="h-9 w-px bg-emerald-100 hidden md:block"></div>
+      <div class="flex items-center gap-3">
+        <span class="text-sm font-bold text-on-surface">{{ user.name }}</span>
+        <img src="{{ user.photo_url or 'https://ui-avatars.com/api/?name=' + user.name }}" 
+             class="w-9 h-9 rounded-full border-2 border-primary-container object-cover" alt="User">
+      </div>
     </div>
-
   </div>
 </nav>
 
-<!-- ── MAIN CONTENT ── -->
-<main class="pt-28 pb-24 px-4">
-  <div class="max-w-[620px] mx-auto space-y-10">
-
-    <!-- Page header -->
-    <header class="text-center space-y-3">
-      <h1 class="text-4xl font-extrabold tracking-tight text-on-surface">
-        Tell us about your organization
-      </h1>
-      <p class="text-on-surface-variant max-w-md mx-auto leading-relaxed">
-        Every great community initiative starts with a clear mission.
-        Let's set up your profile.
-      </p>
-    </header>
-
-    <!-- Global error banner -->
-    <div id="globalError"
-         class="hidden bg-error-container text-on-error-container px-5 py-4
-                rounded-lg font-semibold text-sm">
+<main class="pt-32 pb-24 px-6 min-h-screen">
+  <div class="max-w-3xl mx-auto">
+    
+    <!-- Header -->
+    <div class="text-center mb-12">
+      <h1 class="text-4xl font-black text-on-surface tracking-tight mb-3">Setup your NGO Profile</h1>
+      <p class="text-on-surface-variant text-lg">Help us connect your mission with the right volunteers.</p>
     </div>
 
-    <!-- ── THE FORM ── -->
+    <!-- Progress Indicator -->
+    <div class="flex justify-between mb-2 px-1">
+      <span class="text-xs font-black text-primary uppercase tracking-widest">Identity & Mission</span>
+      <span class="text-xs font-black text-on-surface-variant/40 uppercase tracking-widest">Location</span>
+      <span class="text-xs font-black text-on-surface-variant/40 uppercase tracking-widest">Visuals</span>
+    </div>
+    <div class="progress-bar-container">
+      <div class="progress-bar-fill" id="progressFill"></div>
+    </div>
+
     <form id="ngoForm" novalidate enctype="multipart/form-data">
+      
+      <!-- Hidden Fields -->
+      <input type="hidden" id="latitude" name="latitude" value="22.5726"/>
+      <input type="hidden" id="longitude" name="longitude" value="88.3639"/>
 
-      <!-- ════ SECTION 1: ORG DETAILS ════ -->
-      <div class="bg-surface-container-lowest p-8 rounded-lg
-                  shadow-[0_20px_40px_rgba(0,108,68,0.04)] space-y-6">
-
-        <!-- Org Name -->
-        <div class="space-y-1">
-          <label class="text-xs font-bold tracking-[0.05em] uppercase
-                        text-on-surface-variant px-1">
-            Organization Name <span class="text-error">*</span>
-          </label>
-          <input id="orgName" name="org_name" type="text"
-                 class="w-full bg-surface-container-high border-0 rounded-sm
-                        px-4 py-3 focus:ring-2 focus:ring-primary-fixed
-                        focus:bg-surface-container-lowest transition-all"
-                 placeholder="e.g. GreenRoots Foundation"/>
-          <p class="field-error" id="orgNameErr">Organization name is required.</p>
-        </div>
-
-        <!-- Description -->
-        <div class="space-y-1">
-          <label class="text-xs font-bold tracking-[0.05em] uppercase
-                        text-on-surface-variant px-1">
-            Organization Description <span class="text-error">*</span>
-          </label>
-          <textarea id="orgDesc" name="description" rows="4"
-                    class="w-full bg-surface-container-high border-0 rounded-sm
-                           px-4 py-3 focus:ring-2 focus:ring-primary-fixed
-                           focus:bg-surface-container-lowest transition-all resize-none"
-                    placeholder="Briefly describe your mission and the impact you want to create..."></textarea>
-          <p class="field-error" id="orgDescErr">Description is required.</p>
-        </div>
-
-        <!-- Email + Phone -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div class="space-y-1">
-            <label class="text-xs font-bold tracking-[0.05em] uppercase
-                          text-on-surface-variant px-1">
-              Contact Email <span class="text-error">*</span>
-            </label>
-            <input id="contactEmail" name="contact_email" type="email"
-                   class="w-full bg-surface-container-high border-0 rounded-sm
-                          px-4 py-3 focus:ring-2 focus:ring-primary-fixed
-                          focus:bg-surface-container-lowest transition-all"
-                   placeholder="contact@ngo.org"/>
-            <p class="field-error" id="emailErr">Valid email is required.</p>
+      <div class="space-y-10">
+        
+        <!-- Section 1: Basic Info -->
+        <section class="form-card" id="step1">
+          <div class="flex items-center gap-3 mb-8">
+            <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+              <span class="material-symbols-outlined">corporate_fare</span>
+            </div>
+            <h2 class="text-xl font-bold text-on-surface">Organization Details</h2>
           </div>
 
-          <div class="space-y-1">
-            <label class="text-xs font-bold tracking-[0.05em] uppercase
-                          text-on-surface-variant px-1">
-              Phone Number
-            </label>
-            <input id="phone" name="phone" type="tel"
-                   class="w-full bg-surface-container-high border-0 rounded-sm
-                          px-4 py-3 focus:ring-2 focus:ring-primary-fixed
-                          focus:bg-surface-container-lowest transition-all"
-                   placeholder="+91 98000 00000"/>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- ════ SECTION 2: LOCATION ════ -->
-      <div class="pt-10 border-t border-surface-container-high mt-10">
-        <h2 class="text-xl font-bold mb-6 text-on-surface px-1">
-          Location &amp; Reach
-        </h2>
-
-        <div class="bg-surface-container-lowest p-8 rounded-lg
-                    shadow-[0_20px_40px_rgba(0,108,68,0.04)] space-y-6">
-
-          <!-- Address -->
-          <div class="space-y-1">
-            <label class="text-xs font-bold tracking-[0.05em] uppercase
-                          text-on-surface-variant px-1">
-              Full Address
-            </label>
-            <textarea id="address" name="address" rows="2"
-                      class="w-full bg-surface-container-high border-0 rounded-sm
-                             px-4 py-3 focus:ring-2 focus:ring-primary-fixed
-                             focus:bg-surface-container-lowest transition-all resize-none"
-                      placeholder="123 Community Way, Kolkata"></textarea>
-          </div>
-
-          <!-- City -->
-          <div class="space-y-1">
-            <label class="text-xs font-bold tracking-[0.05em] uppercase
-                          text-on-surface-variant px-1">
-              City <span class="text-error">*</span>
-            </label>
-            <input id="city" name="city" type="text"
-                   class="w-full bg-surface-container-high border-0 rounded-sm
-                          px-4 py-3 focus:ring-2 focus:ring-primary-fixed
-                          focus:bg-surface-container-lowest transition-all"
-                   placeholder="e.g. Kolkata"/>
-            <p class="field-error" id="cityErr">City is required.</p>
-          </div>
-
-          <!-- Hidden lat/lng fields -->
-          <input type="hidden" id="latitude"  name="latitude"  value="22.5726"/>
-          <input type="hidden" id="longitude" name="longitude" value="88.3639"/>
-
-          <!-- Leaflet Map -->
-          <div class="space-y-3">
-            <p class="text-xs font-bold tracking-[0.05em] uppercase
-                      text-on-surface-variant px-1">
-              Pin your location
-            </p>
-            <div id="ngoMap" class="rounded-lg overflow-hidden border
-                                     border-surface-container-high"></div>
-            <p class="text-xs text-on-surface-variant px-1">
-              Click anywhere on the map to move the pin to your exact location.
-            </p>
-          </div>
-
-          <!-- Use current location -->
-          <button id="useLocationBtn" type="button"
-                  class="w-full flex items-center justify-center gap-2 py-3 px-6
-                         rounded-full border-2 border-primary-container text-primary
-                         font-bold hover:bg-primary-fixed/20 transition-all">
-            <span class="material-symbols-outlined text-lg">my_location</span>
-            Use my current location
-          </button>
-
-          <!-- Location status text -->
-          <p id="locationStatus" class="text-xs text-center text-on-surface-variant
-                                         hidden"></p>
-
-        </div>
-      </div>
-
-      <!-- ════ SECTION 3: LOGO UPLOAD ════ -->
-      <div class="pt-10 border-t border-surface-container-high mt-10">
-        <h2 class="text-xl font-bold mb-6 text-on-surface px-1">
-          Visual Identity
-        </h2>
-
-        <div class="bg-surface-container-lowest p-8 rounded-lg
-                    shadow-[0_20px_40px_rgba(0,108,68,0.04)] space-y-6">
-
-          <!-- Hidden file input -->
-          <input type="file" id="logoInput" name="logo"
-                 accept="image/*" class="hidden"/>
-
-          <!-- Drop zone -->
-          <div id="uploadZone"
-               class="w-full border-2 border-dashed border-primary-container
-                      rounded-lg p-10 flex flex-col items-center justify-center
-                      gap-4 bg-surface-container-low/30 hover:bg-surface-container-low
-                      transition-all cursor-pointer group"
-               onclick="document.getElementById('logoInput').click()">
-
-            <div class="w-16 h-16 rounded-full bg-primary-fixed/30 flex items-center
-                        justify-center text-primary group-hover:scale-110
-                        transition-transform">
-              <span class="material-symbols-outlined text-3xl">cloud_upload</span>
+          <div class="space-y-6">
+            <div class="input-group">
+              <label for="orgName">Organization Name *</label>
+              <input type="text" id="orgName" name="org_name" class="input-field" placeholder="e.g. Hope Foundation">
+              <p class="error-text" id="orgNameErr">Name is required.</p>
             </div>
 
-            <div class="text-center">
-              <p class="font-bold text-on-surface">Drop your logo here</p>
-              <p class="text-sm text-on-surface-variant">SVG, PNG, or JPG (Max. 5MB)</p>
+            <div class="input-group">
+              <label for="orgDesc">Mission Statement *</label>
+              <textarea id="orgDesc" name="description" rows="4" class="input-field resize-none" 
+                        placeholder="Tell us what your organization does and the impact you aim to make..."></textarea>
+              <p class="error-text" id="orgDescErr">Description is required.</p>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-6">
+              <div class="input-group">
+                <label for="contactEmail">Public Contact Email *</label>
+                <input type="email" id="contactEmail" name="contact_email" class="input-field" placeholder="contact@org.com">
+                <p class="error-text" id="emailErr">Valid email is required.</p>
+              </div>
+              <div class="input-group">
+                <label for="phone">Phone Number</label>
+                <input type="tel" id="phone" name="phone" class="input-field" placeholder="+91 00000 00000">
+              </div>
             </div>
           </div>
+        </section>
 
-          <!-- Preview row -->
-          <div id="previewRow"
-               class="hidden items-center gap-4 w-full p-4
-                      bg-surface-container rounded-sm">
-            <div class="w-20 h-20 rounded-full bg-white border-4
-                        border-surface-container-highest overflow-hidden
-                        flex items-center justify-center shadow-inner flex-shrink-0">
-              <img id="logoPreview"
-                   class="w-full h-full object-cover"
-                   alt="Logo preview"/>
+        <!-- Section 2: Location -->
+        <section class="form-card" id="step2">
+          <div class="flex items-center gap-3 mb-8">
+            <div class="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center text-secondary">
+              <span class="material-symbols-outlined">location_on</span>
             </div>
-            <div class="flex-1">
-              <p class="text-sm font-bold text-on-surface" id="logoFileName">
-                Logo Preview
-              </p>
-              <p class="text-xs text-on-surface-variant">
-                This will appear on your profile and requests.
-              </p>
-              <!-- Remove button -->
-              <button type="button" id="removeLogoBtn"
-                      class="text-xs text-error font-semibold mt-1
-                             hover:underline">
-                Remove
+            <h2 class="text-xl font-bold text-on-surface">Location & Reach</h2>
+          </div>
+
+          <div class="space-y-6">
+            <div class="input-group">
+              <label for="city">Base City *</label>
+              <input type="text" id="city" name="city" class="input-field" placeholder="e.g. Kolkata">
+              <p class="error-text" id="cityErr">City is required.</p>
+            </div>
+
+            <div class="input-group">
+              <label for="address">Full Office Address</label>
+              <textarea id="address" name="address" rows="2" class="input-field resize-none" placeholder="123, Street Name..."></textarea>
+            </div>
+
+            <div class="space-y-4">
+              <label class="text-xs font-bold tracking-widest text-on-surface-variant uppercase">Pin your location</label>
+
+              <!-- Search bar -->
+              <div style="position:relative;">
+                <input type="text" id="ngoLocationSearch"
+                       placeholder="Search city, area, or landmark…"
+                       class="input-field"
+                       style="padding-left:2.5rem;"
+                       autocomplete="off"/>
+                <span class="material-symbols-outlined"
+                      style="position:absolute;left:12px;top:50%;transform:translateY(-50%);
+                             font-size:18px;color:#6e7a71;">search</span>
+                <!-- Autocomplete dropdown -->
+                <div id="ngoLocationSuggestions"
+                     style="display:none;position:absolute;z-index:100;top:calc(100% + 4px);left:0;right:0;
+                            background:white;border:1px solid rgba(0,108,68,.15);border-radius:12px;
+                            box-shadow:0 8px 24px rgba(0,0,0,.1);overflow:hidden;"></div>
+              </div>
+
+              <div id="ngoMap" class="border border-emerald-50"></div>
+              <div id="mapTag" class="text-xs font-bold text-primary flex items-center gap-1">
+                <span class="material-symbols-outlined text-sm">info</span>
+                Drag the pin or click on map to set your HQ
+              </div>
+              
+              <button type="button" id="useLocationBtn" 
+                      class="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl border-2 border-primary/20 text-primary font-bold hover:bg-primary/5 transition-all">
+                <span class="material-symbols-outlined text-lg">my_location</span>
+                Use Current Location
               </button>
+              <p id="locationStatus" class="text-center text-xs font-bold hidden"></p>
             </div>
           </div>
+        </section>
 
+        <!-- Section 3: Identity -->
+        <section class="form-card" id="step3">
+          <div class="flex items-center gap-3 mb-8">
+            <div class="w-10 h-10 rounded-full bg-tertiary/10 flex items-center justify-center text-tertiary">
+              <span class="material-symbols-outlined">photo_library</span>
+            </div>
+            <h2 class="text-xl font-bold text-on-surface">Visual Identity</h2>
+          </div>
+
+          <div class="space-y-8">
+            <input type="file" id="logoInput" name="logo" accept="image/*" class="hidden">
+            
+            <div id="uploadZone" class="w-full border-2 border-dashed border-emerald-100 rounded-2xl p-12 flex flex-col items-center justify-center gap-4 bg-emerald-50/20 hover:bg-emerald-50/50 transition-all cursor-pointer group"
+                 onclick="document.getElementById('logoInput').click()">
+              <div class="w-16 h-16 rounded-full bg-white shadow-sm flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                <span class="material-symbols-outlined text-3xl">add_photo_alternate</span>
+              </div>
+              <div class="text-center">
+                <p class="font-bold text-on-surface">Upload Organization Logo</p>
+                <p class="text-xs text-on-surface-variant font-medium mt-1">SVG, PNG, or JPG (max 5MB)</p>
+              </div>
+            </div>
+
+            <!-- Preview Area -->
+            <div id="previewRow" class="hidden items-center gap-6 p-6 bg-surface-container rounded-2xl border border-emerald-50">
+              <div class="w-24 h-24 rounded-2xl bg-white shadow-inner overflow-hidden border-4 border-white flex-shrink-0">
+                <img id="logoPreview" class="w-full h-full object-cover" alt="Preview">
+              </div>
+              <div class="flex-1 min-w-0">
+                <p id="logoFileName" class="font-bold text-on-surface truncate">logo_filename.png</p>
+                <p class="text-xs text-on-surface-variant font-medium mt-0.5">Ready to upload</p>
+                <button type="button" id="removeLogoBtn" class="text-xs font-bold text-error mt-2 hover:underline">Remove and replace</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Final Submit -->
+        <div class="pt-6">
+          <div id="globalError" class="hidden mb-6 p-4 bg-error-container text-on-error-container rounded-xl font-bold text-sm text-center"></div>
+          
+          <button id="submitBtn" type="submit" 
+                  class="sage-gradient w-full py-5 rounded-full text-white font-black text-xl shadow-xl shadow-primary/20 hover:shadow-2xl hover:shadow-primary/30 hover:scale-[1.01] active:scale-[0.98] transition-all">
+            Finish Registration
+          </button>
+          
+          <p class="text-center text-xs font-bold text-on-surface-variant mt-8 px-8 leading-relaxed">
+            By completing setup, you agree to our 
+            <a href="#" class="text-primary underline">Community Guidelines</a> and 
+            <a href="#" class="text-primary underline">Terms of Service</a>.
+          </p>
         </div>
       </div>
-
-      <!-- ════ SUBMIT ════ -->
-      <div class="pt-10">
-        <button id="submitBtn" type="submit"
-                class="sage-gradient w-full py-5 rounded-full text-white
-                       font-extrabold text-lg
-                       shadow-[0_20px_40px_rgba(0,108,68,0.2)]
-                       hover:scale-[1.02] active:scale-95 transition-all">
-          Complete Setup
-        </button>
-        <p class="text-center text-xs text-on-surface-variant mt-6 px-10">
-          By completing setup, you agree to SevaSetu's
-          <a href="#" class="underline">Community Guidelines</a> and
-          <a href="#" class="underline">Terms of Service</a>.
-        </p>
-      </div>
-
     </form>
   </div>
 </main>

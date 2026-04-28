@@ -1,6 +1,21 @@
 {% extends "base.html" %}
 
-{% block title %}SevaSetu | Connecting Helping Hands to Hopeful Hearts{% endblock %}
+{% block head %}
+<style>
+  .accordion-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out, padding 0.3s ease;
+  }
+  .accordion-item.active .accordion-content {
+    max-height: 200px;
+    padding-bottom: 1.5rem;
+  }
+  .accordion-item.active .accordion-icon {
+    transform: rotate(180deg);
+  }
+</style>
+{% endblock %}
 
 {% block content %}
 
@@ -9,7 +24,7 @@
   <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center gap-12 lg:gap-20">
 
     <!-- Left Text -->
-    <div class="flex-1 space-y-8">
+    <div class="flex-1 space-y-8" data-aos="fade-right">
       <h1 class="text-5xl md:text-7xl font-extrabold text-on-surface leading-[1.1] tracking-tight">
         Connecting Helping Hands to <span class="text-primary">Hopeful Hearts</span>
       </h1>
@@ -17,27 +32,34 @@
         SevaSetu bridges volunteers with NGOs to address the most urgent community needs — intelligently and instantly.
       </p>
       <div class="flex flex-col sm:flex-row gap-4 pt-4">
-        <button onclick="window.location.href='/getstarted?role=volunteer'"
-          class="primary-gradient-btn text-white px-8 py-4 rounded-full font-bold text-lg shadow-lg shadow-primary/20 hover:shadow-xl hover:-translate-y-0.5 transition-all">
-          I want to Volunteer
-        </button>
-        <button onclick="window.location.href='/getstarted?role=ngo'"
-          class="border-2 border-primary text-primary px-8 py-4 rounded-full font-bold text-lg hover:bg-emerald-50 transition-all">
-          I represent an NGO
-        </button>
+        {% if user %}
+          <button onclick="window.location.href='/getstarted'"
+            class="primary-gradient-btn text-white px-8 py-4 rounded-full font-bold text-lg shadow-lg shadow-primary/20 hover:shadow-xl hover:-translate-y-0.5 transition-all w-full sm:w-auto">
+            Go to Dashboard
+          </button>
+        {% else %}
+          <button onclick="window.location.href='/getstarted?role=volunteer'"
+            class="primary-gradient-btn text-white px-8 py-4 rounded-full font-bold text-lg shadow-lg shadow-primary/20 hover:shadow-xl hover:-translate-y-0.5 transition-all">
+            I want to Volunteer
+          </button>
+          <button onclick="window.location.href='/getstarted?role=ngo'"
+            class="border-2 border-primary text-primary px-8 py-4 rounded-full font-bold text-lg hover:bg-emerald-50 transition-all">
+            I represent an NGO
+          </button>
+        {% endif %}
       </div>
     </div>
 
     <!-- Right Image -->
-    <div class="flex-1 relative">
-      <div class="relative z-10 rounded-lg overflow-hidden">
+    <div class="flex-1 relative" data-aos="zoom-in" data-aos-delay="200">
+      <div class="relative z-10 rounded-lg overflow-hidden shadow-2xl">
         <img alt="Diverse community members helping each other"
           class="rounded-lg object-cover w-full h-[500px]"
-          src="https://lh3.googleusercontent.com/aida-public/AB6AXuBlNdRUICsVpki_84lPtPQBEDKonq45BwQXVtl_z9qE4Ou4ir-BGaWLvrTrlnL-zFj6Gi_jVwg9acF0xb4b7Qpoh0_AWO63Qkoz332oupnmCxlGKMGi9KMzBPzihLqkAi5Fry9e8yi_NmSCmGQToIHuyqRrzwLARSzCDEEFkeY8thLBJ17Ge-1m-PtrgeCeWmDz5XOACauhEnU24DlwEsyKWmOowXJvbrnrry0B-ip2naiBozRO_fKIIsTuHQHbeX6iNHZagR9asYw1"/>
+          src="https://images.unsplash.com/photo-1593113598332-cd288d649433?ixlib=rb-4.0.3&auto=format&fit=crop&w=1170&q=80"/>
       </div>
       <!-- Decorative blobs -->
-      <div class="absolute -bottom-6 -left-6 w-32 h-32 bg-secondary-container rounded-full opacity-20 blur-3xl"></div>
-      <div class="absolute -top-10 -right-10 w-48 h-48 bg-primary-container rounded-full opacity-10 blur-3xl"></div>
+      <div class="absolute -bottom-6 -left-6 w-32 h-32 bg-secondary-container rounded-full opacity-20 blur-3xl animate-pulse"></div>
+      <div class="absolute -top-10 -right-10 w-48 h-48 bg-primary-container rounded-full opacity-10 blur-3xl animate-pulse"></div>
     </div>
 
   </div>
@@ -45,7 +67,7 @@
 
 <!-- Impact Stats Bar -->
 <section class="bg-primary-fixed/30 py-12 px-6">
-  <div class="max-w-7xl mx-auto flex flex-wrap justify-around items-center gap-8 text-center">
+  <div class="max-w-7xl mx-auto flex flex-wrap justify-around items-center gap-8 text-center" data-aos="fade-up">
 
     <div class="space-y-1">
       <div class="text-4xl md:text-5xl font-extrabold text-primary">500+</div>
@@ -73,7 +95,7 @@
 <section class="py-24 px-6 bg-surface">
   <div class="max-w-7xl mx-auto">
 
-    <div class="text-center mb-16 space-y-4">
+    <div class="text-center mb-16 space-y-4" data-aos="fade-up">
       <h2 class="text-3xl md:text-4xl font-bold text-on-surface">How It Works</h2>
       <p class="text-on-surface-variant">Simple steps to make a significant difference</p>
     </div>
@@ -81,7 +103,7 @@
     <div class="grid grid-cols-1 md:grid-cols-3 gap-12 relative">
 
       <!-- Step 1 -->
-      <div class="flex flex-col items-center text-center space-y-6 group">
+      <div class="flex flex-col items-center text-center space-y-6 group" data-aos="fade-up" data-aos-delay="100">
         <div class="relative">
           <div class="w-24 h-24 bg-surface-container-high rounded-full flex items-center justify-center text-primary group-hover:scale-110 transition-transform duration-300">
             <span class="material-symbols-outlined text-4xl">upload</span>
@@ -93,7 +115,7 @@
       </div>
 
       <!-- Step 2 -->
-      <div class="flex flex-col items-center text-center space-y-6 group">
+      <div class="flex flex-col items-center text-center space-y-6 group" data-aos="fade-up" data-aos-delay="200">
         <div class="relative">
           <div class="w-24 h-24 bg-surface-container-high rounded-full flex items-center justify-center text-primary group-hover:scale-110 transition-transform duration-300">
             <span class="material-symbols-outlined text-4xl">auto_awesome</span>
@@ -105,7 +127,7 @@
       </div>
 
       <!-- Step 3 -->
-      <div class="flex flex-col items-center text-center space-y-6 group">
+      <div class="flex flex-col items-center text-center space-y-6 group" data-aos="fade-up" data-aos-delay="300">
         <div class="relative">
           <div class="w-24 h-24 bg-surface-container-high rounded-full flex items-center justify-center text-primary group-hover:scale-110 transition-transform duration-300">
             <span class="material-symbols-outlined text-4xl">handshake</span>
@@ -126,7 +148,7 @@
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
 
       <!-- Left Text -->
-      <div class="space-y-8">
+      <div class="space-y-8" data-aos="fade-right">
         <h2 class="text-4xl md:text-5xl font-extrabold text-on-surface tracking-tight">
           Powerful tools for <span class="text-primary">Community Impact</span>
         </h2>
@@ -141,34 +163,34 @@
       </div>
 
       <!-- Right Feature Cards -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-6" data-aos="fade-left">
 
-        <div class="bg-surface-container-lowest p-8 rounded-lg shadow-[0_20px_40px_rgba(0,108,68,0.06)] hover:shadow-xl transition-shadow">
-          <div class="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center text-primary mb-6">
+        <div class="bg-surface-container-lowest p-8 rounded-lg shadow-[0_20px_40px_rgba(0,108,68,0.06)] hover:shadow-xl transition-shadow group">
+          <div class="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center text-primary mb-6 group-hover:bg-primary group-hover:text-white transition-all">
             <span class="material-symbols-outlined">psychology</span>
           </div>
           <h4 class="text-lg font-bold mb-3">AI-Powered Need Detection</h4>
           <p class="text-sm text-on-surface-variant leading-relaxed">Automatically extract critical data from field reports to categorize urgency levels.</p>
         </div>
 
-        <div class="bg-surface-container-lowest p-8 rounded-lg shadow-[0_20px_40px_rgba(0,108,68,0.06)] hover:shadow-xl transition-shadow">
-          <div class="w-12 h-12 bg-secondary/10 rounded-full flex items-center justify-center text-secondary mb-6">
+        <div class="bg-surface-container-lowest p-8 rounded-lg shadow-[0_20px_40px_rgba(0,108,68,0.06)] hover:shadow-xl transition-shadow group">
+          <div class="w-12 h-12 bg-secondary/10 rounded-full flex items-center justify-center text-secondary mb-6 group-hover:bg-secondary group-hover:text-white transition-all">
             <span class="material-symbols-outlined">extension</span>
           </div>
           <h4 class="text-lg font-bold mb-3">Smart Volunteer Matching</h4>
           <p class="text-sm text-on-surface-variant leading-relaxed">Algorithms that connect the right skills to the right tasks within minutes.</p>
         </div>
 
-        <div class="bg-surface-container-lowest p-8 rounded-lg shadow-[0_20px_40px_rgba(0,108,68,0.06)] hover:shadow-xl transition-shadow">
-          <div class="w-12 h-12 bg-tertiary/10 rounded-full flex items-center justify-center text-tertiary mb-6">
+        <div class="bg-surface-container-lowest p-8 rounded-lg shadow-[0_20px_40px_rgba(0,108,68,0.06)] hover:shadow-xl transition-shadow group">
+          <div class="w-12 h-12 bg-tertiary/10 rounded-full flex items-center justify-center text-tertiary mb-6 group-hover:bg-tertiary group-hover:text-white transition-all">
             <span class="material-symbols-outlined">bolt</span>
           </div>
           <h4 class="text-lg font-bold mb-3">Real-time Coordination</h4>
           <p class="text-sm text-on-surface-variant leading-relaxed">Instant alerts and live messaging for rapid response and task management.</p>
         </div>
 
-        <div class="bg-surface-container-lowest p-8 rounded-lg shadow-[0_20px_40px_rgba(0,108,68,0.06)] hover:shadow-xl transition-shadow">
-          <div class="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-800 mb-6">
+        <div class="bg-surface-container-lowest p-8 rounded-lg shadow-[0_20px_40px_rgba(0,108,68,0.06)] hover:shadow-xl transition-shadow group">
+          <div class="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-800 mb-6 group-hover:bg-emerald-800 group-hover:text-white transition-all">
             <span class="material-symbols-outlined">bar_chart</span>
           </div>
           <h4 class="text-lg font-bold mb-3">Community Impact Tracking</h4>
@@ -180,4 +202,150 @@
   </div>
 </section>
 
+<!-- Testimonials -->
+<section class="py-24 px-6 bg-surface overflow-hidden">
+  <div class="max-w-7xl mx-auto">
+    <div class="text-center mb-16" data-aos="fade-up">
+      <h2 class="text-3xl md:text-4xl font-bold text-on-surface mb-4">What Our Community Says</h2>
+      <p class="text-on-surface-variant font-medium">Stories of impact and connection</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <!-- Testimonial 1 -->
+      <div class="bg-white p-10 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow relative" data-aos="fade-up" data-aos-delay="100">
+        <span class="material-symbols-outlined text-primary/20 text-6xl absolute top-6 right-8">format_quote</span>
+        <p class="text-on-surface-variant italic mb-8 relative z-10 leading-relaxed">
+          "SevaSetu transformed how we recruit volunteers. The AI matching is remarkably accurate, saving us hours of manual outreach during crises."
+        </p>
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary">AM</div>
+          <div>
+            <h4 class="font-bold text-on-surface">Arjun Mehta</h4>
+            <p class="text-xs text-on-surface-variant uppercase tracking-widest font-bold">Director, ReliefIndia</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Testimonial 2 -->
+      <div class="bg-white p-10 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow relative" data-aos="fade-up" data-aos-delay="200">
+        <span class="material-symbols-outlined text-primary/20 text-6xl absolute top-6 right-8">format_quote</span>
+        <p class="text-on-surface-variant italic mb-8 relative z-10 leading-relaxed">
+          "Being able to find volunteer opportunities that actually fit my medical background in my neighborhood is a game-changer. I feel more connected than ever."
+        </p>
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 rounded-full bg-secondary/10 flex items-center justify-center font-bold text-secondary">SN</div>
+          <div>
+            <h4 class="font-bold text-on-surface">Sarah Nelson</h4>
+            <p class="text-xs text-on-surface-variant uppercase tracking-widest font-bold">Medical Volunteer</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Testimonial 3 -->
+      <div class="bg-white p-10 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow relative" data-aos="fade-up" data-aos-delay="300">
+        <span class="material-symbols-outlined text-primary/20 text-6xl absolute top-6 right-8">format_quote</span>
+        <p class="text-on-surface-variant italic mb-8 relative z-10 leading-relaxed">
+          "The transparency of the platform is what I love most. You can literally see the impact of your contribution through the field reports."
+        </p>
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 rounded-full bg-tertiary/10 flex items-center justify-center font-bold text-tertiary">PK</div>
+          <div>
+            <h4 class="font-bold text-on-surface">Priya Kapoor</h4>
+            <p class="text-xs text-on-surface-variant uppercase tracking-widest font-bold">Logistics Specialist</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ Section -->
+<section class="py-24 px-6 bg-surface-container-lowest">
+  <div class="max-w-3xl mx-auto">
+    <div class="text-center mb-16" data-aos="fade-up">
+      <h2 class="text-3xl md:text-4xl font-bold text-on-surface mb-4">Frequently Asked Questions</h2>
+      <p class="text-on-surface-variant font-medium">Everything you need to know to get started</p>
+    </div>
+
+    <div class="space-y-4">
+      <!-- FAQ Item 1 -->
+      <div class="accordion-item bg-white rounded-2xl border border-slate-100 overflow-hidden" data-aos="fade-up">
+        <button class="w-full px-8 py-6 flex justify-between items-center text-left hover:bg-slate-50 transition-colors" onclick="toggleAccordion(this)">
+          <span class="font-bold text-on-surface">How does SevaSetu verify NGOs?</span>
+          <span class="material-symbols-outlined text-primary accordion-icon transition-transform">expand_more</span>
+        </button>
+        <div class="accordion-content px-8 text-on-surface-variant text-sm leading-relaxed">
+          Every NGO undergoes a rigorous verification process, including documentation review and background checks, to ensure community safety and platform integrity.
+        </div>
+      </div>
+
+      <!-- FAQ Item 2 -->
+      <div class="accordion-item bg-white rounded-2xl border border-slate-100 overflow-hidden" data-aos="fade-up">
+        <button class="w-full px-8 py-6 flex justify-between items-center text-left hover:bg-slate-50 transition-colors" onclick="toggleAccordion(this)">
+          <span class="font-bold text-on-surface">Can I volunteer if I don't have specialized skills?</span>
+          <span class="material-symbols-outlined text-primary accordion-icon transition-transform">expand_more</span>
+        </button>
+        <div class="accordion-content px-8 text-on-surface-variant text-sm leading-relaxed">
+          Absolutely! While we match specialists to specific needs, many community tasks simply require a helping hand and a willing heart.
+        </div>
+      </div>
+
+      <!-- FAQ Item 3 -->
+      <div class="accordion-item bg-white rounded-2xl border border-slate-100 overflow-hidden" data-aos="fade-up">
+        <button class="w-full px-8 py-6 flex justify-between items-center text-left hover:bg-slate-50 transition-colors" onclick="toggleAccordion(this)">
+          <span class="font-bold text-on-surface">Is my personal data secure?</span>
+          <span class="material-symbols-outlined text-primary accordion-icon transition-transform">expand_more</span>
+        </button>
+        <div class="accordion-content px-8 text-on-surface-variant text-sm leading-relaxed">
+          We use industry-standard encryption and security protocols to protect your information. Your location is only shared during active task coordination.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Bottom CTA -->
+<section class="py-24 px-6 bg-primary overflow-hidden relative">
+  <!-- Decorative elements -->
+  <div class="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full -mr-48 -mt-48 blur-3xl"></div>
+  <div class="absolute bottom-0 left-0 w-96 h-96 bg-emerald-400/10 rounded-full -ml-48 -mb-48 blur-3xl"></div>
+
+  <div class="max-w-4xl mx-auto text-center relative z-10" data-aos="zoom-in">
+    <h2 class="text-4xl md:text-6xl font-black text-white mb-8 leading-tight">
+      Ready to build a stronger <br class="hidden md:block"> community together?
+    </h2>
+    <p class="text-emerald-50/80 text-xl mb-12 max-w-2xl mx-auto font-medium">
+      Join thousands of volunteers and NGOs making a difference every single day through SevaSetu.
+    </p>
+    <div class="flex flex-col sm:flex-row justify-center gap-4">
+      <button onclick="window.location.href='/getstarted'"
+        class="bg-white text-primary px-10 py-5 rounded-full font-black text-lg shadow-2xl hover:scale-105 active:scale-95 transition-all">
+        Get Started Now
+      </button>
+      <button onclick="window.location.href='/discover'"
+        class="bg-emerald-800/40 backdrop-blur-md text-white border border-white/20 px-10 py-5 rounded-full font-black text-lg hover:bg-emerald-800/60 transition-all">
+        Explore Opportunities
+      </button>
+    </div>
+  </div>
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function toggleAccordion(btn) {
+    const item = btn.parentElement;
+    const isActive = item.classList.contains('active');
+    
+    // Close all other accordions
+    document.querySelectorAll('.accordion-item').forEach(el => {
+      el.classList.remove('active');
+    });
+    
+    if (!isActive) {
+      item.classList.add('active');
+    }
+  }
+</script>
 {% endblock %}

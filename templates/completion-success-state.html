@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Report Submitted | SevaSetu{% endblock %}
+
+{% block head %}
+<style>
+    body { background: #f8f9ff; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+    .success-card {
+        background: white;
+        border-radius: 2rem;
+        padding: 3.5rem;
+        box-shadow: 0 25px 70px rgba(0, 108, 68, 0.08);
+        text-align: center;
+        max-width: 500px;
+        width: 90%;
+        border: 1px solid rgba(0, 108, 68, 0.05);
+    }
+    .check-circle {
+        width: 80px;
+        height: 80px;
+        background: #006c44;
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 2rem;
+        box-shadow: 0 10px 30px rgba(0, 108, 68, 0.3);
+    }
+    .sage-gradient {
+        background: linear-gradient(135deg, #006c44 0%, #4caf7d 100%);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="w-full flex items-center justify-center p-6">
+    <div class="success-card relative overflow-hidden">
+        <div class="absolute -top-10 -right-10 w-32 h-32 bg-primary/5 rounded-full"></div>
+        
+        <div class="check-circle">
+            <span class="material-symbols-outlined" style="font-size: 40px; font-variation-settings: 'wght' 700;">check</span>
+        </div>
+
+        <h1 class="text-3xl font-black text-on-surface tracking-tight mb-4 leading-tight">
+            Report Submitted Successfully
+        </h1>
+        
+        <p class="text-on-surface-variant font-medium mb-8 leading-relaxed">
+            Great work! Your completion report has been sent to the NGO for review. 
+            Once verified, this task will be marked as fully completed on your profile.
+        </p>
+
+        <div class="space-y-4">
+            <a href="/volunteer/dashboard" class="block w-full py-4 rounded-full sage-gradient text-white font-black text-lg shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all">
+                Back to Dashboard
+            </a>
+            
+            <div class="pt-6 border-t border-emerald-50 mt-8">
+                <p class="text-[10px] font-black tracking-widest uppercase text-on-surface-variant/40 flex items-center justify-center gap-2">
+                    <span class="material-symbols-outlined" style="font-size: 14px">verified_user</span>
+                    Secured Submission Protocol
+                </p>
+            </div>
+        </div>
+    </div>
+</main>
+{% endblock %}

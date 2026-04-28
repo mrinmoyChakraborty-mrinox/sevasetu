@@ -1,191 +1,137 @@
-<!DOCTYPE html>
-<html class="light" lang="en">
-<head>
-    <meta charset="utf-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Inbox | SevaSetu</title>
+{% extends "base.html" %}
 
-    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+{% block title %}Inbox | SevaSetu{% endblock %}
 
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet"/>
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+{% block head %}
+<style>
+    .hide-scrollbar::-webkit-scrollbar { display: none; }
+    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        "primary": "#006c44",
-                        "surface": "#f8f9ff",
-                        "on-surface": "#121c2a",
-                        "outline": "#6e7a71",
-                    },
-                    fontFamily: { "sans": ["Plus Jakarta Sans"] },
-                },
-            },
-        }
-    </script>
+    /* Panel visibility on mobile vs desktop */
+    #leftPanel  { display: flex; }
+    #rightPanel { display: none; }
 
-    <style>
-        .hide-scrollbar::-webkit-scrollbar { display: none; }
-        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-    </style>
-</head>
+    @media (min-width: 768px) {
+        #leftPanel  { display: flex !important; }
+        #rightPanel { display: flex !important; }
+    }
 
-<body class="bg-surface text-on-surface antialiased overflow-hidden h-screen flex flex-col">
+    /* On mobile: when a conv is open, hide left and show right */
+    body.conv-open #leftPanel  { display: none; }
+    body.conv-open #rightPanel { display: flex; }
 
-<!-- ================= HEADER ================= -->
-<header class="flex justify-between items-center px-6 h-16 w-full bg-emerald-50/80 backdrop-blur-md shadow-sm z-30">
+    @media (min-width: 768px) {
+        body.conv-open #leftPanel  { display: flex !important; }
+        body.conv-open #rightPanel { display: flex !important; }
+    }
     
-    <div class="flex items-center gap-4">
-        <button id="menuToggle" class="md:hidden text-primary">
-            <span class="material-symbols-outlined">menu</span>
-        </button>
-        <span class="text-2xl font-bold text-emerald-900">SevaSetu</span>
-    </div>
+    /* Adjust height to fit between navbar and bottom of screen */
+    .inbox-container {
+        height: calc(100vh - 64px); /* 64px is base.html navbar height */
+    }
+</style>
+{% endblock %}
 
-    <div class="flex items-center gap-6">
-
-        <!-- SEARCH -->
-        <div class="hidden sm:flex items-center bg-white/50 rounded-full px-4 py-1.5 border">
-            <span class="material-symbols-outlined text-outline mr-2">search</span>
-            <input id="searchConversations" class="bg-transparent text-sm w-48 outline-none" placeholder="Search..." type="text"/>
-        </div>
-
-        <div class="flex items-center gap-4">
-
-            <span id="notificationsBtn" class="material-symbols-outlined cursor-pointer p-2 hover:bg-emerald-100 rounded-full">
-                notifications
-            </span>
-                   
-            <!-- ❌ REMOVED chatBubbleBtn -->
-
-            <div class="relative">
-                <img id="userProfileImage" class="w-10 h-10 rounded-full border-2 border-primary cursor-pointer"
-                     src="https://ui-avatars.com/api/?name=User&background=006c44&color=fff"/>
-                <input type="file" id="profileImageInput" class="hidden" accept="image/*"/>
-            </div>
-
-        </div>
-    </div>
-</header>
-
-<!-- ================= MAIN ================= -->
-<main class="flex flex-1 overflow-hidden">
-
+{% block content %}
+<div class="inbox-container flex overflow-hidden">
     <!-- LEFT PANEL -->
-    <section class="w-full md:w-[30%] bg-[#eff4ff] border-r flex flex-col">
-        
-        <div class="p-6">
+    <section id="leftPanel" class="w-full md:w-[30%] bg-[#eff4ff] border-r flex-col flex-shrink-0">
+        <div class="p-6 flex-shrink-0">
             <h2 class="text-2xl font-bold mb-4">Messages</h2>
-
             <div class="relative">
-                <input id="searchMessages" class="w-full pl-10 pr-4 py-3 bg-white rounded-2xl text-sm"
-                       placeholder="Search" type="text"/>
-                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">
-                    search
-                </span>
+                <input id="searchMessages"
+                       class="w-full pl-10 pr-4 py-3 bg-white rounded-2xl text-sm outline-none border border-transparent focus:border-primary transition-all"
+                       placeholder="Search conversations" type="text"/>
+                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">search</span>
             </div>
         </div>
 
         <div id="messagesList" class="flex-1 overflow-y-auto hide-scrollbar px-4 pb-6">
-            <!-- dynamic chats -->
+            <!-- Skeleton loading state -->
+            <div id="convSkeleton" class="space-y-3">
+                <div class="animate-pulse flex items-center gap-3 p-4">
+                    <div class="w-12 h-12 rounded-full bg-gray-200 flex-shrink-0"></div>
+                    <div class="flex-1 space-y-2">
+                        <div class="h-4 bg-gray-200 rounded w-2/3"></div>
+                        <div class="h-3 bg-gray-200 rounded w-1/2"></div>
+                    </div>
+                </div>
+            </div>
         </div>
-
     </section>
 
     <!-- RIGHT PANEL -->
-    <section class="hidden md:flex flex-col flex-1 bg-white relative">
+    <section id="rightPanel" class="flex-1 bg-white flex-col relative">
+        <!-- Back button for mobile -->
+        <button id="backBtn" class="md:hidden absolute top-4 left-4 z-10 text-primary hidden bg-white/80 backdrop-blur-sm p-2 rounded-full shadow-sm" onclick="closeChatPanel()">
+            <span class="material-symbols-outlined">arrow_back</span>
+        </button>
 
-        <!-- HEADER -->
-        <header class="h-20 flex justify-between items-center px-8 border-b">
+        <!-- Empty state (shown when no conv selected) -->
+        <div id="emptyState" class="flex-1 flex flex-col items-center justify-center text-gray-400 h-full">
+            <span class="material-symbols-outlined text-6xl mb-4">chat_bubble_outline</span>
+            <p class="font-semibold text-lg">Select a conversation</p>
+            <p class="text-sm mt-1">Choose from your messages on the left</p>
+        </div>
 
-            <div class="flex items-center gap-4">
-                <img id="chatUserImage" class="w-10 h-10 rounded-full hidden"/>
-                <div>
-                    <h3 id="chatUserName" class="font-bold text-sm">Select a conversation</h3>
-                    <p id="chatUserStatus" class="text-xs text-outline"></p>
-                </div>
-            </div>
-
-            <!-- ACTION BUTTONS -->
-            <div class="flex items-center gap-3 text-gray-500">
-
-                <button id="callBtn" class="p-2 hover:bg-gray-100 rounded-full">
-                    <span class="material-symbols-outlined">call</span>
-                </button>
-
-                <button id="videoCallBtn" class="p-2 hover:bg-gray-100 rounded-full">
-                    <span class="material-symbols-outlined">video_call</span>
-                </button>
-
-                <!-- OPTIONS FIXED -->
-                <div class="relative">
-                    <button id="moreOptionsBtn" class="p-2 hover:bg-gray-100 rounded-full">
-                        <span class="material-symbols-outlined">more_vert</span>
-                    </button>
-
-                    <div id="optionsMenu" class="hidden absolute right-0 top-12 bg-white shadow-lg rounded-xl p-3 w-40 z-50">
-                        <p class="p-2 hover:bg-gray-100 rounded cursor-pointer">Delete Chat</p>
-                        <p class="p-2 hover:bg-gray-100 rounded cursor-pointer">Mark Unread</p>
-                        <p class="p-2 hover:bg-gray-100 rounded cursor-pointer">Star Chat</p>
+        <!-- Chat UI (hidden until conv selected) -->
+        <div id="chatUI" class="flex-col flex-1 hidden h-full flex">
+            <!-- HEADER -->
+            <header class="h-16 flex justify-between items-center px-6 border-b flex-shrink-0">
+                <div class="flex items-center gap-4">
+                    <div class="relative">
+                        <img id="chatUserImage"
+                             class="w-10 h-10 rounded-full object-cover hidden"
+                             src="" alt=""/>
+                        <div id="chatUserInitials"
+                             class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold hidden">
+                        </div>
+                    </div>
+                    <div>
+                        <h3 id="chatUserName" class="font-bold text-sm">Loading...</h3>
+                        <p id="chatUserStatus" class="text-xs text-outline">Online</p>
                     </div>
                 </div>
+                <div class="flex items-center gap-2 text-gray-400">
+                    <button class="p-2 hover:bg-gray-100 rounded-full" title="Call">
+                        <span class="material-symbols-outlined">call</span>
+                    </button>
+                    <button class="p-2 hover:bg-gray-100 rounded-full" title="Video call">
+                        <span class="material-symbols-outlined">video_call</span>
+                    </button>
+                </div>
+            </header>
 
+            <!-- MESSAGES -->
+            <div id="messagesContainer" class="flex-1 overflow-y-auto p-6 space-y-2 hide-scrollbar"
+                 style="min-height: 0;">
+                <!-- Messages rendered here -->
             </div>
-        </header>
 
-        <!-- MESSAGES -->
-        <div id="messagesContainer" class="flex-1 overflow-y-auto p-8">
-            <div class="text-center text-outline mt-20">
-                No conversation selected
+            <!-- INPUT AREA -->
+            <div class="p-4 border-t flex-shrink-0">
+                <div class="flex items-center gap-3 bg-[#eff4ff] p-2 rounded-2xl">
+                    <button class="p-2 text-primary hover:bg-white rounded-full transition-colors">
+                        <span class="material-symbols-outlined">add_circle</span>
+                    </button>
+                    <input id="messageInput"
+                           class="flex-1 bg-transparent outline-none text-sm"
+                           placeholder="Type a message..."
+                           type="text"/>
+                    <button id="sendBtn"
+                            class="bg-primary text-white p-2.5 rounded-xl hover:bg-primary/90 transition-colors">
+                        <span class="material-symbols-outlined">send</span>
+                    </button>
+                </div>
             </div>
         </div>
-
-        <!-- INPUT AREA -->
-        <div class="p-6 relative">
-
-            <!-- FILE INPUT -->
-            <input type="file" id="fileInput" class="hidden">
-
-            <div class="flex items-center gap-3 bg-[#eff4ff] p-2 rounded-2xl">
-
-                <button id="attachmentBtn" class="p-2 text-primary hover:bg-white rounded-full">
-                    <span class="material-symbols-outlined">add_circle</span>
-                </button>
-
-                <button id="emojiBtn" class="p-2 text-outline hover:bg-white rounded-full">
-                    <span class="material-symbols-outlined">mood</span>
-                </button>
-
-                <input id="messageInput" class="flex-1 bg-transparent outline-none text-sm"
-                       placeholder="Type message..." type="text"/>
-
-                <button id="sendBtn" class="bg-primary text-white p-2.5 rounded-xl">
-                    <span class="material-symbols-outlined">send</span>
-                </button>
-
-            </div>
-
-            <!-- EMOJI BOX -->
-           <div id="emojiBox" class="hidden absolute bottom-16 left-10 bg-white shadow-lg p-3 rounded-xl z-50 space-x-2">
-               <span class="emoji">😊</span>
-               <span class="emoji">😂</span>
-               <span class="emoji">😍</span>
-               <span class="emoji">😎</span>
-               <span class="emoji">😢</span>
-               <span class="emoji">👍</span>
-               <span class="emoji">🎉</span>
-               <span class="emoji">❤️</span>
-               <span class="emoji">🔥</span>
-           </div>
-        </div>
-
     </section>
+</div>
+{% endblock %}
 
-</main>
+{% block footer %}{% endblock %}
 
+{% block scripts %}
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 <script src="{{ url_for('static', filename='js/inbox.js') }}"></script>
-
-</body>
-</html>
+{% endblock %}

@@ -14,36 +14,40 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ── Switch to Sign In ──
   function showSignIn() {
-    signinTab.classList.add("active");
-    signupTab.classList.remove("active");
+    signinTab.classList.add("bg-white", "shadow-sm", "text-primary");
+    signinTab.classList.remove("text-slate-500", "hover:text-slate-700");
+    
+    signupTab.classList.remove("bg-white", "shadow-sm", "text-primary");
+    signupTab.classList.add("text-slate-500", "hover:text-slate-700");
 
     formTitle.textContent   = "Welcome Back";
     formSubtext.textContent = "Access your community dashboard and needs.";
 
-    signinForm.style.display = "block";
-    signupForm.style.display = "none";
+    signinForm.classList.remove("hidden");
+    signupForm.classList.add("hidden");
 
-    // Update submit button label + data-label
-    const btn = signinForm.querySelector(".submit-btn");
-    btn.textContent    = "Sign In to SevaSetu";
-    btn.dataset.label  = "Sign In to SevaSetu";
+    // Update submit button label if exists
+    const btn = signinForm.querySelector("button[type='submit']");
+    if (btn) btn.textContent = "Sign In";
   }
 
   // ── Switch to Sign Up ──
   function showSignUp() {
-    signupTab.classList.add("active");
-    signinTab.classList.remove("active");
+    signupTab.classList.add("bg-white", "shadow-sm", "text-primary");
+    signupTab.classList.remove("text-slate-500", "hover:text-slate-700");
+    
+    signinTab.classList.remove("bg-white", "shadow-sm", "text-primary");
+    signinTab.classList.add("text-slate-500", "hover:text-slate-700");
 
     formTitle.textContent   = "Join SevaSetu";
     formSubtext.textContent = "Start helping your community today.";
 
-    signinForm.style.display = "none";
-    signupForm.style.display = "block";
+    signinForm.classList.add("hidden");
+    signupForm.classList.remove("hidden");
 
-    // Update submit button label + data-label
-    const btn = signupForm.querySelector(".submit-btn");
-    btn.textContent   = "Create My Account";
-    btn.dataset.label = "Create My Account";
+    // Update submit button label if exists
+    const btn = signupForm.querySelector("button[type='submit']");
+    if (btn) btn.textContent = "Create My Account";
   }
 
   signinTab.addEventListener("click", showSignIn);

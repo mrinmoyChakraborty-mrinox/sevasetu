@@ -57,9 +57,15 @@ document.querySelectorAll('.btn-scale').forEach(btn => {
 // Toast Notification Helper
 // =============================================
 
+const toastAudio = new Audio('/static/sounds/toast.mp3');
+
 function showToast(message, type = 'default') {
     const container = document.getElementById('toast-container');
     if (!container) return;
+
+    // Play sound
+    toastAudio.currentTime = 0;
+    toastAudio.play().catch(e => console.log('Audio play failed:', e));
 
     const toast = document.createElement('div');
     toast.className = `toast ${type === 'urgent' ? 'urgent' : ''}`;

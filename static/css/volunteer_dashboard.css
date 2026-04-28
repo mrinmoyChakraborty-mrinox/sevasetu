@@ -363,6 +363,25 @@ body::before {
 .view-details-btn:hover { gap: 8px; }
 .view-details-btn .material-symbols-outlined { font-size: 16px; }
 
+/* Work Action Buttons */
+.work-action-btn.start {
+  background: #006c44;
+  color: white;
+}
+.work-action-btn.start:hover {
+  background: #005232;
+  box-shadow: 0 4px 12px rgba(0,108,68,0.25);
+}
+.work-action-btn.pause {
+  background: #fff8ed;
+  color: #855300;
+  border: 1px solid #ffddb8 !important;
+}
+.work-action-btn.pause:hover {
+  background: #ffddb8;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
 /* ── 11. FOOTER ─────────────────────────────────────────── */
 .site-footer {
   border-top: 1px solid rgba(0,108,68,.08);
@@ -480,9 +499,21 @@ body::before {
 }
 
 /* ── 14. RESPONSIVE TWEAKS ───────────────────────────────── */
-@media(max-width:640px) {
+@media(max-width:768px) {
   .header-inner { padding: 12px 18px; }
-  .page-body { padding: 20px 16px 90px; }
-  .welcome-bar { padding: 18px 20px; }
+  .page-body { padding: 20px 12px 90px; }
+  .welcome-bar { padding: 20px; flex-direction: column; align-items: stretch; text-align: center; }
+  .welcome-bar .flex-1 { flex-direction: column; }
+  .status-toggle { align-self: center; }
+  .stats-grid { grid-template-columns: 1fr; }
+  .dash-grid { grid-template-columns: 1fr; }
   .map-img-wrap { height: 220px; }
+}
+
+@media(max-width:480px) {
+  .logo-text { display: none; }
+  .welcome-bar h2 { font-size: 1.4rem; }
+  .task-card { padding: 16px; }
+  .task-actions { flex-direction: column; }
+  .btn-accept, .btn-decline { width: 100%; }
 }
