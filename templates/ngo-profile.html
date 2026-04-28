@@ -83,6 +83,4 @@
     window.PROFILE_UID = "{{ profile_uid | default('') }}" || new URLSearchParams(location.search).get("ngoId");
   </script>
   <script src="{{ url_for('static', filename='js/ngo-profile.js') }}"></script>
-</body>
-
-</html>
+{% endblock %}
