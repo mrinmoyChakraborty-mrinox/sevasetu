@@ -230,6 +230,15 @@
       <!-- Right column: Ola Maps location picker -->
       <div class="flex flex-col gap-3">
         <span class="form-label">Pin Location (Optional)</span>
+        
+        <div class="relative">
+          <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm">search</span>
+          <input type="text" id="manualMapSearchInput" 
+                 placeholder="Search for a landmark or area..." 
+                 class="w-full pl-10 pr-4 py-2.5 bg-surface-container-low border border-surface-container rounded-xl text-sm focus:ring-2 focus:ring-secondary transition-all outline-none"/>
+          <div id="manualMapSearchResults" class="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-surface-container hidden z-50 max-h-48 overflow-y-auto"></div>
+        </div>
+
         <div id="manualMap" style="height:280px;border-radius:0.75rem;overflow:hidden;border:1.5px solid #bdcabf;"></div>
         <p id="manualMapTag" class="text-xs text-on-surface-variant">📍 Click map or drag pin to set location</p>
         <button type="button" id="manualUseLocationBtn" onclick="useManualCurrentLocation()"
@@ -475,7 +484,13 @@
   function closeModalOutside(e) { if(e.target===document.getElementById('post-modal')) closeModal(); }
 
   /* Manual modal */
-  function openManual() { document.getElementById('manual-modal').classList.add('open'); document.body.style.overflow='hidden'; }
+  function openManual() { 
+    document.getElementById('manual-modal').classList.add('open'); 
+    document.body.style.overflow='hidden'; 
+    if (typeof initManualMapOnce === 'function') {
+      setTimeout(initManualMapOnce, 100);
+    }
+  }
   function closeManual() { document.getElementById('manual-modal').classList.remove('open'); document.body.style.overflow=''; }
   function closeManualOutside(e) { if(e.target===document.getElementById('manual-modal')) closeManual(); }
 

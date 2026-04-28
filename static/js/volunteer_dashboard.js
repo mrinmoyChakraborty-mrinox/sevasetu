@@ -872,6 +872,7 @@ async function updateCurrentLocation() {
 
 let relocateMapInstance = null;
 let relocateCoords = null;
+let relocateMarker = null;
 
 function initRelocationMap() {
   if (relocateMapInstance) {
@@ -887,10 +888,37 @@ function initRelocationMap() {
     zoom: 12
   });
 
-  relocateMapInstance.on('move', () => {
-    const center = relocateMapInstance.getCenter();
-    relocateCoords = { lat: center.lat, lng: center.lng };
-    updateRelocateAddress(center.lat, center.lng);
+  const pinEl = document.createElement("div");
+  pinEl.style.cssText = `width:32px;height:32px;background:#ba1a1a;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2.5px solid white;box-shadow:0 3px 12px rgba(0,0,0,0.3);cursor:grab;`;
+
+  relocateMapInstance.on('load', () => {
+    relocateMarker = olaMaps
+      .addMarker({ element: pinEl, draggable: true })
+      .setLngLat([77.5946, 12.9716])
+      .addTo(relocateMapInstance);
+
+    relocateMarker.on('dragend', () => {
+      const pos = relocateMarker.getLngLat();
+      relocateCoords = { lat: pos.lat, lng: pos.lng };
+      updateRelocateAddress(pos.lat, pos.lng);
+    });
+
+    relocateMapInstance.on('click', (e) => {
+      const { lat, lng } = e.lngLat;
+      relocateMarker.setLngLat([lng, lat]);
+      relocateCoords = { lat, lng };
+      updateRelocateAddress(lat, lng);
+    });
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(pos => {
+        const { latitude: lat, longitude: lng } = pos.coords;
+        relocateMapInstance.setCenter([lng, lat]);
+        relocateMarker.setLngLat([lng, lat]);
+        relocateCoords = { lat, lng };
+        updateRelocateAddress(lat, lng);
+      }, () => {});
+    }
   });
 
   // Search logic for relocation
@@ -937,10 +965,13 @@ window.selectRelocatePlace = async (placeId, text) => {
   try {
     const res = await fetch(`https://api.olamaps.io/places/v1/details?place_id=${placeId}&api_key=${OLA_MAPS_API_KEY}`);
     const data = await res.json();
-    if (data.result?.geometry?.location) {
-      const loc = data.result.geometry.location;
-      relocateMapInstance.flyTo({ center: [loc.lng, loc.lat], zoom: 15 });
-    }
+      if (data.result?.geometry?.location) {
+        const loc = data.result.geometry.location;
+        relocateMapInstance.flyTo({ center: [loc.lng, loc.lat], zoom: 15 });
+        if (relocateMarker) relocateMarker.setLngLat([loc.lng, loc.lat]);
+        relocateCoords = { lat: loc.lat, lng: loc.lng };
+        updateRelocateAddress(loc.lat, loc.lng);
+      }
   } catch (err) { console.error("Place details error:", err); }
 };
 
