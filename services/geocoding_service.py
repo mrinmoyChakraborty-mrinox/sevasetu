@@ -28,18 +28,21 @@ logger = logging.getLogger(__name__)
 _OLA_API_BASE = "https://api.olamaps.io"
 
 
-def geocode_location(text: str) -> dict | None:
+def geocode_location(text: str, context: str = None) -> dict | None:
     """
     Forward-geocode a free-text location string using OlaMaps.
+    'context' can be provided (e.g. city name) to narrow down the search.
 
     Returns a dict  { city: str, lat: float, lng: float }
     or None on failure / empty results.
-
-    The function is intentionally lenient — if any step fails it
-    returns None so callers can fall back to storing the raw string.
     """
     if not text or not text.strip():
         return None
+
+    # Combine text with context if available
+    search_input = text.strip()
+    if context:
+        search_input = f"{search_input}, {context.strip()}"
 
     api_key = os.environ.get("OLA_MAPS_API_KEY")
     if not api_key:
@@ -49,13 +52,13 @@ def geocode_location(text: str) -> dict | None:
     try:
         resp = requests.get(
             f"{_OLA_API_BASE}/places/v1/textsearch",
-            params={"input": text.strip(), "api_key": api_key},
+            params={"input": search_input, "api_key": api_key},
             timeout=8,
         )
 
         if resp.status_code != 200:
             logger.warning(
-                f"[Geocoding] Text search failed for {text!r} — "
+                f"[Geocoding] Text search failed for {search_input!r} — "
                 f"HTTP {resp.status_code}: {resp.text[:200]}"
             )
             return None
@@ -64,7 +67,7 @@ def geocode_location(text: str) -> dict | None:
         results = data.get("results") or data.get("predictions") or []
 
         if not results:
-            logger.info(f"[Geocoding] No results for {text!r}")
+            logger.info(f"[Geocoding] No results for {search_input!r}")
             return None
 
         first = results[0]
@@ -75,34 +78,30 @@ def geocode_location(text: str) -> dict | None:
         lng = geo.get("lng")
 
         if lat is None or lng is None:
-            logger.warning(f"[Geocoding] Missing geometry in result for {text!r}")
+            logger.warning(f"[Geocoding] Missing geometry in result for {search_input!r}")
             return None
 
         # ── Extract a clean city / short name ────────────────────
-        # Prefer address_components locality, fall back to first
-        # comma-separated part of formatted_address.
         city = _extract_city(first)
 
         logger.info(
-            f"[Geocoding] '{text}' → city={city!r}  lat={lat}  lng={lng}"
+            f"[Geocoding] '{search_input}' → city={city!r}  lat={lat}  lng={lng}"
         )
         return {"city": city, "lat": float(lat), "lng": float(lng)}
 
     except Exception as exc:
-        logger.error(f"[Geocoding] Exception for {text!r}: {exc}")
+        logger.error(f"[Geocoding] Exception for {search_input!r}: {exc}")
         return None
 
 
-def geocode_location_safe(text: str) -> dict:
+def geocode_location_safe(text: str, context: str = None) -> dict:
     """
     Like geocode_location() but always returns a dict.
     Falls back to  { city: text, lat: None, lng: None }
-    so Firestore writes never fail due to a missing location.
     """
-    result = geocode_location(text)
+    result = geocode_location(text, context=context)
     if result:
         return result
-    # Preserve the raw text as city so it's still searchable
     return {"city": text or "", "lat": None, "lng": None}
 
 

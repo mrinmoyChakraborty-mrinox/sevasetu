@@ -220,16 +220,19 @@ function renderContributions(list) {
         card.className = "bg-surface-container-low p-5 rounded-xl flex justify-between items-center";
 
         card.innerHTML = `
-            <div>
-                <h4 class="font-bold">${task.title}</h4>
-                <p class="text-xs text-gray-500">${task.ngo} • ${task.time}</p>
-            </div>
-
-            <div class="text-right">
-                <span class="text-xs px-3 py-1 rounded-full ${statusColor}">
-                    ${task.status}
-                </span>
-                <p class="text-xs mt-1">${task.points || ""}</p>
+            <div class="flex-1">
+                <div class="flex justify-between items-start mb-2">
+                    <div>
+                        <h4 class="font-bold text-on-surface">${task.title}</h4>
+                        <p class="text-xs text-on-surface-variant font-medium">${task.ngo} • ${task.time}</p>
+                    </div>
+                    <span class="text-[10px] px-3 py-1 rounded-full font-bold uppercase tracking-wider ${statusColor}">
+                        ${task.status}
+                    </span>
+                </div>
+                <p class="text-sm text-on-surface-variant line-clamp-2 leading-relaxed">
+                    ${task.description || "Contributed to community welfare and local development."}
+                </p>
             </div>
         `;
 

@@ -2190,12 +2190,19 @@ def api_volunteer_profile(uid):
                 else: time_str = f"{diff.seconds//60}m ago"
             except: pass
 
+        # Data enrichment: Get description from need if missing
+        description = mdata.get("description") or mdata.get("need_description") or ""
+        if not description and mdata.get("need_id"):
+            need_doc = db.collection("needs").document(mdata["need_id"]).get()
+            if need_doc.exists:
+                description = need_doc.to_dict().get("description", "")
+
         contributions.append({
             "title":  mdata.get("title") or mdata.get("need_title") or "Community Support",
+            "description": description[:120] + "..." if len(description) > 120 else description,
             "ngo":    mdata.get("ngo_name") or "Local NGO",
             "time":   time_str,
-            "status": "completed",
-            "points": f"+{mdata.get('points', 10)}"
+            "status": "completed"
         })
 
     return jsonify({
