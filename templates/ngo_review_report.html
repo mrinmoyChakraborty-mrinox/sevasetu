@@ -34,26 +34,31 @@
     <header class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
         <div>
             <div class="flex items-center gap-3 mb-4">
+                {% if need.status == 'completed' %}
+                <span class="inline-flex items-center px-4 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-bold tracking-widest uppercase">
+                    <span class="material-symbols-outlined text-sm mr-1.5" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                    Approved & Completed
+                </span>
+                {% else %}
                 <span class="inline-flex items-center px-4 py-1.5 rounded-full bg-secondary/10 text-secondary text-xs font-bold tracking-widest uppercase">
                     Submitted for Review
                 </span>
+                {% endif %}
             </div>
             <h1 class="text-4xl md:text-5xl font-bold tracking-tight text-on-surface mb-2">Review Completion Report</h1>
             <p class="text-on-surface-variant max-w-2xl">Validate the impact and resource allocation for the emergency response initiative.</p>
         </div>
         <div class="flex flex-wrap gap-3">
-            <button class="flex items-center gap-2 px-6 py-3 rounded-full border-2 border-primary text-primary font-bold hover:bg-primary/5 transition-all">
+            <button class="flex items-center gap-2 px-6 py-3 rounded-full border-2 border-primary text-primary font-bold hover:bg-primary/5 transition-all" onclick="startChat('{{ volunteer.id }}', '{{ need.id }}')">
                 <span class="material-symbols-outlined">mail</span>
                 Message Volunteer
             </button>
-            <button class="flex items-center gap-2 px-6 py-3 rounded-full border-2 border-secondary text-secondary font-bold hover:bg-secondary/5 transition-all">
-                <span class="material-symbols-outlined">edit_note</span>
-                Request Changes
-            </button>
+            {% if need.status != 'completed' and user.role == 'ngo' %}
             <button id="approveBtn" class="flex items-center gap-2 px-8 py-3 rounded-full primary-gradient-btn text-white font-bold shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all" onclick="openReviewModal()">
                 <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">check_circle</span>
                 Approve & Rate
             </button>
+            {% endif %}
         </div>
     </header>
 
@@ -90,6 +95,31 @@
                     </div>
                 </div>
             </div>
+
+            {% if need.status == 'completed' %}
+            <div class="bg-primary/5 rounded-3xl p-8 border border-primary/10" data-aos="fade-up">
+                <h2 class="text-sm font-bold tracking-widest uppercase text-primary mb-6">NGO Feedback</h2>
+                <div class="flex items-start gap-6">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-1 mb-3">
+                            {% for i in range(5) %}
+                            <span class="material-symbols-outlined text-2xl {{ 'text-amber-400' if i < (need.ngo_rating|int) else 'text-slate-200' }}" 
+                                  style="font-variation-settings: 'FILL' 1;">star</span>
+                            {% endfor %}
+                            <span class="ml-2 font-bold text-on-surface">{{ need.ngo_rating }}/5</span>
+                        </div>
+                        <p class="text-on-surface font-medium leading-relaxed italic">
+                            "{{ need.ngo_review or 'No written review provided.' }}"
+                        </p>
+                    </div>
+                    <div class="hidden md:block">
+                        <div class="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-primary/5">
+                            <span class="material-symbols-outlined text-3xl text-primary" style="font-variation-settings: 'FILL' 1;">verified</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
         </section>
 
         <aside class="lg:col-span-4 space-y-6">
@@ -159,6 +189,24 @@
 <script>
     const NEED_ID = "{{ need.id }}";
 
+    async function startChat(volunteerId, needId) {
+        try {
+            const res = await fetch('/api/chat/start-with-vol/' + needId, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const data = await res.json();
+            if (data.success) {
+                window.location.href = '/inbox?conv_id=' + data.conversation_id;
+            } else {
+                alert('Could not start chat: ' + data.error);
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Error starting chat.');
+        }
+    }
+
     function openReviewModal() {
         const modal = document.getElementById('reviewModal');
         modal.classList.remove('hidden');
@@ -201,7 +249,7 @@
 
             const data = await res.json();
             alert('Mission successfully completed! Thank you for your review.');
-            window.location.href = '/ngo/dashboard';
+            window.location.reload(); // Reload to show the approved state
         } catch (err) {
             console.error(err);
             alert('Error submitting approval. Please try again.');

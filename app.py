@@ -2437,10 +2437,20 @@ def ngo_report_review_page(need_id):
     """NGO page to review a submitted task report."""
     if not session.get("user"):
         return redirect("/getstarted")
-    if session["user"].get("role") != "ngo":
-        return redirect("/select-role")
-    
     need = firebase_services.get_need_by_id(need_id)
+    if not need:
+        return "Need not found", 404
+        
+    user = session["user"]
+    report = need.get("completion_report", {})
+    vol_id = report.get("volunteer_id")
+    
+    # Authorize: NGO of the need or the Volunteer who submitted it
+    is_ngo = user.get("role") == "ngo" and need.get("ngo_id") == user.get("uid")
+    is_vol = user.get("role") == "volunteer" and vol_id == user.get("uid")
+    
+    if not (is_ngo or is_vol):
+        return redirect("/select-role")
     if not need or need.get("status") not in ["in_review", "completed"]:
         return "Report not found or not in review/completed state", 404
     
