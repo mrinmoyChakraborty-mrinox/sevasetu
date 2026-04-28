@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="static/images/full_logo.png" alt="SevaSetu Logo" width="220"/>
+  <img src="static/images/full_logo_withbg.png" alt="SevaSetu Logo" width="220"/>
 </p>
 
 <p align="center">
