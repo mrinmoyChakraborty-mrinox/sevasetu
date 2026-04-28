@@ -780,6 +780,7 @@ def api_volunteer_work_action(task_id):
     
     match_ref = firebase_services.get_db().collection("matches").document(task_id)
     match_doc = match_ref.get()
+    need_id=match_doc.to_dict().get("need_id") if match_doc.exists else None
     
     if not match_doc.exists:
         return jsonify({"error": "Match not found"}), 404
@@ -800,8 +801,9 @@ def api_volunteer_work_action(task_id):
     
     # Notify NGO
     ngo_id = mdata.get("ngo_id")
-    vol_name = session["user"].get("name", "A volunteer")
-    need_title = mdata.get("title", "a task")
+
+    vol_name = firebase_services.get_volunteer_profile(uid).get("name", "A volunteer")
+    need_title = firebase_services.get_need_by_id(need_id).get("title", "a task") if need_id else "a task"
     
     if ngo_id:
         if action == "start":
@@ -853,8 +855,8 @@ def api_volunteer_complete_task(task_id):
         if match_doc.exists:
             mdata     = match_doc.to_dict()
             ngo_id    = mdata.get("ngo_id")
-            vol_name  = session["user"].get("name", "A volunteer")
-            need_title = mdata.get("title", "a task")
+            vol_name  = firebase_services.get_volunteer_profile(uid).get("name", "A volunteer")
+            need_title = firebase_services.get_need_by_id(need_id).get("title", "a task") if need_id else "a task"
             if ngo_id:
                 add_notification(
                     ngo_id,
@@ -894,9 +896,10 @@ def api_volunteer_work_start():
     match_doc = match_ref.get()
     if match_doc.exists:
         mdata = match_doc.to_dict()
+        need_id=mdata.get("need_id")
         ngo_id = mdata.get("ngo_id")
-        vol_name = session["user"].get("name", "A volunteer")
-        need_title = mdata.get("title", "a task")
+        vol_name = firebase_services.get_volunteer_profile(uid).get("name", "A volunteer")
+        need_title = firebase_services.get_need_by_id(need_id).get("title", "a task") if need_id else "a task"
         if ngo_id:
             add_notification(
                 ngo_id, 
@@ -933,15 +936,16 @@ def api_volunteer_work_pause():
     if match_doc.exists:
         mdata = match_doc.to_dict()
         ngo_id = mdata.get("ngo_id")
-        vol_name = session["user"].get("name", "A volunteer")
-        need_title = mdata.get("title", "a task")
+        vol_name = firebase_services.get_volunteer_profile(uid).get("name", "A volunteer")
+        need_id = mdata.get("need_id")
+        need_title = firebase_services.get_need_by_id(need_id).get("title", "a task") if need_id else "a task"
         if ngo_id:
             add_notification(
                 ngo_id, 
                 "Work Paused", 
                 f"{vol_name} has paused work on: {need_title}",
                 "warning",
-                {"match_id": task_id, "need_id": mdata.get("need_id")}
+                {"match_id": task_id, "need_id": mdata.get("need_id") }
             )
             notification_service.notify_ngo_work_paused(
                 ngo_id, vol_name, need_title, mdata.get("need_id")
