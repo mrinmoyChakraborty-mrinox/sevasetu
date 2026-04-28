@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SevaSetu Portal | NGO Profile</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<!-- <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/> -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-dim": "#d0dbed",
+                        "primary": "#006c44",
+                        "surface-container-low": "#eff4ff",
+                        "error": "#ba1a1a",
+                        "on-secondary": "#ffffff",
+                        "secondary-container": "#fea619",
+                        "on-tertiary-fixed": "#410006",
+                        "error-container": "#ffdad6",
+                        "surface-container-lowest": "#ffffff",
+                        "primary-fixed": "#93f7bf",
+                        "inverse-on-surface": "#eaf1ff",
+                        "surface-tint": "#006c44",
+                        "on-tertiary": "#ffffff",
+                        "on-surface-variant": "#3e4942",
+                        "surface-container-highest": "#d9e3f6",
+                        "secondary-fixed-dim": "#ffb95f",
+                        "on-error-container": "#93000a",
+                        "on-surface": "#121c2a",
+                        "on-primary-fixed": "#002112",
+                        "on-secondary-fixed": "#2a1700",
+                        "inverse-primary": "#77daa4",
+                        "surface-container": "#e6eeff",
+                        "secondary-fixed": "#ffddb8",
+                        "background": "#f8f9ff",
+                        "secondary": "#855300",
+                        "surface-bright": "#f8f9ff",
+                        "outline-variant": "#bdcabf",
+                        "tertiary-fixed-dim": "#ffb3b0",
+                        "surface-variant": "#d9e3f6",
+                        "outline": "#6e7a71",
+                        "on-primary": "#ffffff",
+                        "on-secondary-container": "#684000",
+                        "on-primary-container": "#003d25",
+                        "tertiary-fixed": "#ffdad8",
+                        "on-primary-fixed-variant": "#005232",
+                        "inverse-surface": "#27313f",
+                        "surface": "#f8f9ff",
+                        "on-error": "#ffffff",
+                        "primary-container": "#4caf7d",
+                        "tertiary-container": "#fa7272",
+                        "primary-fixed-dim": "#77daa4",
+                        "on-tertiary-fixed-variant": "#881d24",
+                        "on-background": "#121c2a",
+                        "tertiary": "#a83639",
+                        "on-tertiary-container": "#6d0714",
+                        "surface-container-high": "#dee9fc",
+                        "on-secondary-fixed-variant": "#653e00"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "headline": ["Plus Jakarta Sans"],
+                        "display": ["Plus Jakarta Sans"],
+                        "body": ["Plus Jakarta Sans"],
+                        "label": ["Plus Jakarta Sans"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .sage-gradient {
+            background: linear-gradient(135deg, #006c44 0%, #4caf7d 100%);
+        }
+        .amber-gradient {
+            background: linear-gradient(135deg, #855300 0%, #fea619 100%);
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface min-h-screen">
+<!-- TopNavBar -->
+<nav class="bg-[#f8f9ff]/80 dark:bg-[#121c2a]/80 backdrop-blur-xl flex justify-between items-center w-full px-6 py-4 max-w-screen-2xl mx-auto fixed top-0 z-50 no-border shadow-[0_20px_40px_rgba(0,108,68,0.06)]">
+<div class="flex items-center gap-8">
+<span class="text-2xl font-bold text-[#006c44] dark:text-[#4caf7d] tracking-tighter font-['Plus_Jakarta_Sans']">SevaSetu</span>
+<div class="hidden md:flex items-center gap-6">
+<a class="text-[#3e4942] dark:text-slate-400 hover:text-[#006c44] font-medium transition-all duration-300" href="#">Discover</a>
+<a class="text-[#006c44] dark:text-[#4caf7d] border-b-2 border-[#006c44] font-bold pb-1 transition-all duration-300" href="#">Impact</a>
+<a class="text-[#3e4942] dark:text-slate-400 hover:text-[#006c44] font-medium transition-all duration-300" href="#">Community</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 text-[#3e4942] hover:bg-[#f1f5f9] rounded-full transition-all duration-300">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 text-[#3e4942] hover:bg-[#f1f5f9] rounded-full transition-all duration-300">
+<span class="material-symbols-outlined">favorite</span>
+</button>
+<div class="w-10 h-10 rounded-full overflow-hidden bg-surface-container-highest">
+<img alt="User profile avatar" data-alt="Close up portrait of a smiling community volunteer with warm lighting and a soft focus garden background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB9CuVJBCqG2pPmqfbOHo84gXwuUw8jIlIUl953_dICDSZjq7beyZTvUQaPmeLhV3EQHSWnQ0-kLxGa5eVNeXArP1zIVrZAerH3AVdahx3ly12jg20M2pjCNa6woZGHoQUHrQlORqToVQ1qA5-bQjmAwgmohDiANEwXQVehWsz23gPZaOb4ZiO_6-wUMMnEOmIOo3dk_04oDDR-ynGfyg5FwRIvnCPZxIe_QDKzF6N-bZZxFFnhdi4LmlYzYBn3UsG7gqeqw-a2Xahk"/>
+</div>
+</div>
+</nav>
+
+<main class="pt-28 pb-20 px-6 max-w-7xl mx-auto">
+<!-- Header Section -->
+<header class="relative mb-12">
+
+<div class="relative px-8 flex flex-col md:flex-row items-end gap-6">
+ <!-- NGO IMAGE -->
+    <div class="w-40 h-40 rounded-full border-8 border-surface bg-surface-container-lowest shadow-2xl shadow-primary/10 overflow-hidden shrink-0 flex items-center justify-center">
+
+      <img 
+        id="ngoImage"
+        src="https://via.placeholder.com/150"
+        alt="NGO Profile Image"
+        class="w-3/4 h-3/4 object-contain"
+      />
+
+    </div>
+
+ <!-- NGO INFO -->
+    <div class="flex-1 pb-2">
+
+      <div class="flex items-center gap-3 mb-1">
+
+        <!-- NAME -->
+        <h1 
+          id="ngoName"
+          class="text-4xl md:text-5xl font-black text-on-surface tracking-tight font-headline">
+            NGO
+        </h1>
+ <!-- VERIFIED BADGE -->
+        <span 
+          id="verifiedBadge"
+          class="material-symbols-outlined text-primary text-3xl hidden"
+          title="Verified NGO">
+          verified
+        </span>
+
+      </div>
+
+ <!-- TAGLINE -->
+      <p 
+        id="ngoTagline"
+        class="text-xl text-[#3e4942] font-medium max-w-2xl">
+        Empowering communities through collective action and compassion.
+      </p>
+
+    </div>
+
+<div class="flex gap-3 pb-4">
+<button id="messageBtn" class="bg-surface-container-highest text-on-surface px-8 py-3 rounded-full font-bold hover:scale-[1.05] transition-all">Message</button>
+<button id="followBtn" class="sage-gradient text-white px-8 py-3 rounded-full font-bold shadow-lg shadow-primary/20 hover:scale-[1.05] transition-all">Follow</button>
+</div>
+</div>
+</header>
+<!-- Content Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+<!-- Left Column: Profile Info -->
+<div class="lg:col-span-2 space-y-8">
+ <!-- ABOUT SECTION -->
+    <section class="bg-surface-container-lowest p-10 rounded-lg shadow-sm">
+
+      <h2 class="text-2xl font-bold text-on-surface mb-6 flex items-center gap-2">
+        <span class="material-symbols-outlined text-primary">info</span>
+        About Us
+      </h2>
+
+      <!-- DESCRIPTION -->
+      <div 
+        id="ngoDescription"
+        class="space-y-4 text-on-surface-variant leading-relaxed text-lg">
+        
+        <!-- Backend will inject <p>...</p> here -->
+
+      </div>
+
+<div class="mt-10 grid grid-cols-1 md:grid-cols-2 gap-6 pt-8 border-t border-surface-container">
+<div class="space-y-4">
+<h3 class="text-sm font-bold uppercase tracking-widest text-primary/70">Connect</h3>
+<ul class="space-y-3">
+<li class="flex items-center gap-3 text-on-surface">
+<span class="material-symbols-outlined text-primary-container">mail</span>
+                                   <span id="ngoEmail"></span>
+                                </li>
+<!-- <li class="flex items-center gap-3 text-on-surface">
+<span class="material-symbols-outlined text-primary-container">language</span>
+                                    www.sevasetu.org
+                                </li> -->
+<li class="flex items-center gap-3 text-on-surface">
+<span class="material-symbols-outlined text-primary-container">call</span>
+                                    <span id="ngoPhone"></span>
+                                </li>
+   </ul>
+ </div>
+</div>
+ </section>
+<!-- Recent Activity Bento -->
+<section>
+<!-- <h2 class="text-2xl font-bold text-on-surface mb-6 px-2">Community Pulse</h2> -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+<!-- Skills Needed -->
+    <div class="bg-primary-fixed/20 p-8 rounded-lg md:col-span-2">
+
+      <h3 class="text-sm font-bold uppercase tracking-widest text-on-primary-container mb-6">
+        Skills Currently Needed
+      </h3>
+
+      <!-- DYNAMIC SKILLS CONTAINER -->
+      <div 
+        id="skillsContainer"
+        class="flex flex-wrap gap-3">
+
+        <!-- Backend will inject skills here -->
+
+      </div>
+
+      <!-- EMPTY STATE -->
+      <p 
+        id="noSkillsText"
+        class="hidden text-sm text-on-surface-variant italic">
+        No specific skills required at the moment.
+      </p>
+
+    </div>
+
+  </div>
+
+</section>
+</div>
+<!-- Right Column: Stats & Impacts -->
+<!-- Right Column -->
+<div class="space-y-8">
+
+  <!-- STATS -->
+  <div class="grid grid-cols-1 gap-6">
+
+    <!-- NEEDS MET -->
+    <div class="bg-surface-container-lowest p-8 rounded-lg shadow-sm border-l-4 border-primary">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-on-surface-variant font-bold text-sm uppercase tracking-widest">
+          Needs Met
+        </span>
+        <span class="material-symbols-outlined text-primary">task_alt</span>
+      </div>
+
+      <div class="flex items-baseline gap-2">
+        <span id="needsMet" class="text-5xl font-black text-on-surface tracking-tighter"></span>
+        <span id="needsGrowth" class="text-primary font-bold text-sm"></span>
+      </div>
+    </div>
+
+    <!-- ACTIVE VOLUNTEERS -->
+    <div class="bg-surface-container-lowest p-8 rounded-lg shadow-sm border-l-4 border-secondary">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-on-surface-variant font-bold text-sm uppercase tracking-widest">
+          Active Volunteers
+        </span>
+        <span class="material-symbols-outlined text-secondary">groups</span>
+      </div>
+
+      <div class="flex items-baseline gap-2">
+        <span id="activeVolunteers" class="text-5xl font-black text-on-surface tracking-tighter"></span>
+        <span id="volunteerStatus" class="text-secondary font-bold text-sm"></span>
+      </div>
+    </div>
+
+    <!-- YEARS -->
+    <div class="bg-surface-container-lowest p-8 rounded-lg shadow-sm border-l-4 border-primary-container">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-on-surface-variant font-bold text-sm uppercase tracking-widest">
+          Years of Service
+        </span>
+        <span class="material-symbols-outlined text-primary-container">history</span>
+      </div>
+
+      <div class="flex items-baseline gap-2">
+        <span id="yearsOfService" class="text-5xl font-black text-on-surface tracking-tighter"></span>
+        <span id="estYear" class="text-on-surface-variant font-bold text-sm"></span>
+      </div>
+    </div>
+
+  </div>
+</div>
+</main>
+ <!-- LOCATION -->
+ <!-- FULL WIDTH MAP -->
+<section class="mt-8 mb-20 px-6 max-w-7xl mx-auto">
+    <div class="relative w-full h-[400px] rounded-3xl overflow-hidden shadow-2xl shadow-primary/5 border border-surface-container">
+        
+        <div class="absolute inset-0 bg-primary/5">
+            <img 
+                src="https://via.placeholder.com/1600x600"
+                alt="Location Map"
+                class="w-full h-full object-cover grayscale opacity-60 mix-blend-multiply"
+            />
+        </div>
+
+        <div class="absolute inset-0 flex items-center justify-center">
+            <div class="relative">
+                <div class="absolute inset-0 animate-ping bg-primary/40 rounded-full"></div>
+                
+                <div class="relative bg-surface-container-lowest p-5 rounded-full shadow-2xl border-2 border-primary flex items-center justify-center">
+                    <span class="material-symbols-outlined text-primary text-4xl fill-1">
+                        location_on
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="absolute bottom-8 left-1/2 -translate-x-1/2 w-[90%] md:w-auto">
+            <div class="bg-white/80 dark:bg-black/40 backdrop-blur-xl border border-white/20 px-8 py-4 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.1)] flex items-center gap-4">
+                <div class="w-10 h-10 rounded-lg sage-gradient flex items-center justify-center text-white shrink-0">
+                    <span class="material-symbols-outlined text-xl">explore</span>
+                </div>
+                <div class="text-left">
+                    <p class="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Headquarters</p>
+                    <p id="ngoLocation" class="text-lg font-bold text-on-surface leading-tight">Loading address...</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</section>
+<script src="{{ url_for('static', filename='js/ngo-profile.js') }}"></script>
+</body></html>
