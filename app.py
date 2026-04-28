@@ -2153,20 +2153,23 @@ def api_volunteer_profile(uid):
     vol  = vol_doc.to_dict()
     user = user_doc.to_dict() if user_doc.exists else {}
 
+    from google.cloud.firestore_v1.base_query import FieldFilter
+    
     # Completed tasks
     completed = list(
         db.collection("matches")
-          .where("volunteer_id", "==", uid)
-          .where("status", "==", "completed")
+          .where(filter=FieldFilter("volunteer_id", "==", uid))
+          .where(filter=FieldFilter("status", "==", "completed"))
           .stream()
     )
     ngo_ids_assisted = {m.to_dict().get("ngo_id") for m in completed if m.to_dict().get("ngo_id")}
 
     contributions = []
-    from datetime import datetime
+    from datetime import datetime, timezone
     
-    # Sort by updated_at descending
-    sorted_completed = sorted(completed, key=lambda x: x.to_dict().get("updated_at", ""), reverse=True)
+    # Sort by updated_at descending, use EPOCH for missing timestamps to avoid TypeError
+    EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
+    sorted_completed = sorted(completed, key=lambda x: x.to_dict().get("updated_at") or EPOCH, reverse=True)
     
     for m in sorted_completed[:10]:
         mdata = m.to_dict()
